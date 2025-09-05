@@ -107,4 +107,8 @@ install-system:
 test-examples:
 	@echo "🧪 Testowanie wszystkich examples..."
 	python3 scripts/test_examples.py
+
+repair:
+	@echo "🔧 Repairing commands from READMEs..."
+	python3 scripts/test_commands.py
 	@echo "✅ Testowanie zakończone - sprawdź test_results.md"
