@@ -110,5 +110,5 @@ test-examples: install
 
 repair: install
 	@echo "🔧 Repairing commands from READMEs..."
-	python3 scripts/test_commands.py
+	python3 scripts/test_commands_robust.py
 	@echo "✅ Testing complete - check test_results.md"
