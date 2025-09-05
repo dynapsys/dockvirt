@@ -14,11 +14,11 @@ DEFAULT_CONFIG = {
                     'jammy-server-cloudimg-amd64.img'),
             'variant': 'ubuntu22.04'
         },
-        'fedora36': {
+        'fedora38': {
             'url': ('https://download.fedoraproject.org/pub/fedora/linux/'
-                    'releases/36/Cloud/x86_64/images/'
-                    'Fedora-Cloud-Base-36-1.5.x86_64.qcow2'),
-            'variant': 'fedora-cloud-base-36'
+                    'releases/38/Cloud/x86_64/images/'
+                    'Fedora-Cloud-Base-38-1.6.x86_64.qcow2'),
+            'variant': 'fedora-cloud-base-38'
         },
     },
 }

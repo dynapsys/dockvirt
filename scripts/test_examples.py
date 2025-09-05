@@ -19,7 +19,7 @@ class ExampleTester:
     def __init__(self):
         self.examples_dir = Path(__file__).parent.parent / "examples"
         self.test_results = {}
-        self.test_os_variants = ["ubuntu22.04", "fedora36"]
+        self.test_os_variants = ["ubuntu22.04", "fedora38"]
         
     def run_command(self, cmd: str, cwd: Path = None, timeout: int = 300) -> Tuple[bool, str, str]:
         """Run shell command with timeout."""

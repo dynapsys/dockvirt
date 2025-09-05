@@ -248,7 +248,62 @@ Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/ho
 
 Plik `.dockvirt` ma priorytet nad parametrami domyślnymi, ale parametry CLI zastępują wszystko.
 
-## 📚 Przykłady użycia
+## 🔥 Ekstremalne przykłady użycia
+
+### 🚀 Example 1: Multi-Tenant SaaS Platform
+
+**Scenario:** Każdy klient SaaS ma całkowicie izolowaną instancję aplikacji w osobnej VM.
+
+```bash
+# Klient A
+dockvirt up --name client-a --domain client-a.myaas.com --image myapp:v2.1 --os ubuntu22.04
+
+# Klient B  
+dockvirt up --name client-b --domain client-b.myaas.com --image myapp:v1.9 --os fedora36
+
+# Klient C (beta tester)
+dockvirt up --name client-c --domain beta.myaas.com --image myapp:v3.0-beta --os ubuntu22.04
+```
+
+**Rezultat:** 
+- ✅ Zero konfliktów między klientami
+- ✅ Różne wersje aplikacji dla różnych klientów  
+- ✅ Pełna izolacja danych i zasobów
+- ✅ Automatyczne SSL/TLS dla każdej domeny
+
+### 🌐 Example 2: Development Environment as Code
+
+**Scenario:** Cały zespół deweloperski otrzymuje identyczne środowiska jedną komendą.
+
+```yaml
+# .dockvirt-stack (wieloappka)
+stack:
+  frontend:
+    image: myapp-frontend:latest
+    domain: app.dev.local
+    os: ubuntu22.04
+  backend:
+    image: myapp-api:latest  
+    domain: api.dev.local
+    os: ubuntu22.04
+  database:
+    image: postgres:15
+    domain: db.dev.local
+    os: fedora36
+```
+
+```bash
+# Jeden developer
+dockvirt stack deploy dev-john
+
+# Drugi developer
+dockvirt stack deploy dev-jane
+
+# QA environment
+dockvirt stack deploy qa-env
+```
+
+## 📚 Szczegółowe przykłady
 
 Przygotowaliśmy kilka praktycznych przykładów, które pokażą Ci możliwości nowego, uproszczonego API:
 
@@ -298,6 +353,68 @@ netstat -an | findstr LISTENING
 dockvirt up --name app1 --domain app1.local --image nginx --port 80
 dockvirt up --name app2 --domain app2.local --image apache --port 80
 # Oba działają bez konfliktów!
+```
+
+## 💾 Bootable Images dla Raspberry Pi / PC
+
+### 🥧 Raspberry Pi SD Card Image
+
+```bash
+# Generuj obraz SD karty z preinstalowanym dockvirt
+dockvirt generate-image \
+  --type raspberry-pi \
+  --size 8GB \
+  --output rpi-dockvirt.img \
+  --apps "nginx:latest,postgres:13" \
+  --domains "app.pi.local,db.pi.local"
+
+# Flash na SD kartę
+dd if=rpi-dockvirt.img of=/dev/sdX bs=4M status=progress
+```
+
+### 💻 PC Bootable ISO
+
+```bash
+# Generuj bootable ISO dla PC/serwera
+dockvirt generate-image \
+  --type pc-iso \
+  --size 16GB \
+  --output production-server.iso \
+  --config production-stack.yaml
+```
+
+**Przykład production-stack.yaml:**
+```yaml
+apps:
+  frontend:
+    image: mycompany/frontend:v2.1
+    domain: app.company.com
+    port: 3000
+  api:
+    image: mycompany/api:v2.1  
+    domain: api.company.com
+    port: 8080
+  monitoring:
+    image: grafana/grafana:latest
+    domain: monitoring.company.com
+    port: 3000
+config:
+  auto_start: true
+  ssl_enabled: true
+  backup_enabled: true
+```
+
+### 🚢 Podman Support
+
+```bash
+# Użyj Podman zamiast Docker
+export DOCKVIRT_RUNTIME=podman
+dockvirt up --name my-app --image nginx:latest
+
+# Lub w pliku .dockvirt
+runtime=podman
+name=my-app
+image=nginx:latest
 ```
 
 ## 🛠️ Development

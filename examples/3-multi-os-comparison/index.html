@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DockerVirt - Porównanie Systemów Operacyjnych</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 20px; margin-bottom: 30px; }
+        .os-info { background: #ecf0f1; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #3498db; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .success { color: #27ae60; }
+        .code { background: #34495e; color: #ecf0f1; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ DockerVirt</h1>
+            <h2>Porównanie Systemów Operacyjnych</h2>
+        </div>
+
+        <div class="os-info">
+            <h3>🎯 Aktualny System</h3>
+            <p>Ta strona działa na <span class="highlight" id="current-os">systemie VM</span></p>
+            <p>Możesz przetestować tę samą aplikację na różnych OS:</p>
+            
+            <div class="code">
+# Ubuntu 22.04 (domyślny)<br>
+dockvirt up --os ubuntu22.04<br><br>
+# Fedora 36<br>
+dockvirt up --os fedora36
+            </div>
+        </div>
+
+        <div class="os-info">
+            <h3>✨ Zalety DockerVirt</h3>
+            <ul>
+                <li><span class="success">✓</span> Pełna izolacja na poziomie VM</li>
+                <li><span class="success">✓</span> Łatwe przełączanie między OS</li>
+                <li><span class="success">✓</span> Automatyczna konfiguracja sieci</li>
+                <li><span class="success">✓</span> Wbudowany reverse proxy (Caddy)</li>
+                <li><span class="success">✓</span> Zero-config deployment</li>
+            </ul>
+        </div>
+
+        <div class="os-info">
+            <h3>🚀 Testowanie</h3>
+            <p>Ten przykład pokazuje, że ta sama aplikacja Docker działa identycznie na:</p>
+            <ul>
+                <li><strong>Ubuntu 22.04</strong> - najpopularniejsza dystrybucja</li>
+                <li><strong>Fedora 36</strong> - cutting-edge technologie</li>
+                <li><strong>Inne OS</strong> - można dodać własne obrazy</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #7f8c8d;">
+            <p>🔗 <strong>dockvirt</strong> - VM + Docker + Caddy = ❤️</p>
+        </div>
+    </div>
+
+    <script>
+        // Prosta detekcja systemu na podstawie user agent (dla demonstracji)
+        const userAgent = navigator.userAgent.toLowerCase();
+        let os = "Unknown OS";
+        if (userAgent.includes('ubuntu')) os = "Ubuntu VM";
+        else if (userAgent.includes('fedora')) os = "Fedora VM";  
+        else os = "Linux VM";
+        
+        document.getElementById('current-os').textContent = os;
+    </script>
+</body>
+</html>
