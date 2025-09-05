@@ -154,10 +154,13 @@ Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/ho
 
 ## 📚 Przykłady użycia
 
-Przygotowaliśmy kilka praktycznych przykładów, które pomogą Ci zacząć:
+Przygotowaliśmy kilka praktycznych przykładów, które pokażą Ci możliwości nowego, uproszczonego API:
 
-*   **[Przykład 1: Statyczna strona na Nginx](./examples/1-static-nginx-website)**
-*   **[Przykład 2: Aplikacja webowa w Pythonie (Flask)](./examples/2-python-flask-app)**
+*   **[Przykład 1: Statyczna strona na Nginx](./examples/1-static-nginx-website)** - Podstawowe użycie z automatycznym pobieraniem obrazów
+*   **[Przykład 2: Aplikacja webowa w Pythonie (Flask)](./examples/2-python-flask-app)** - Aplikacja z porównaniem Ubuntu vs Fedora
+*   **[Przykład 3: Porównanie systemów operacyjnych](./examples/3-multi-os-comparison)** - Konfiguracja własnych obrazów i testowanie wydajności
+
+Każdy przykład teraz korzysta z nowego, uproszczonego API - nie musisz już podawać ścieżek do obrazów ani wariantów OS!
 
 ## 🛠️ Development
 

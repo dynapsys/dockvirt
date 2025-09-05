@@ -12,16 +12,26 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
     ```
 
 2.  **Uruchom VM za pomocą `dockvirt`**:
-    Użyj `dockvirt`, aby utworzyć maszynę wirtualną i uruchomić w niej kontener z Twoją stroną. Pamiętaj, aby podać prawidłową ścieżkę do obrazu chmurowego (`--base-image`) i jego wariant (`--os-variant`).
+    Teraz używanie `dockvirt` jest znacznie prostsze! Nie musisz już podawać ścieżek do obrazów - wszystko zostanie pobrane automatycznie:
 
     ```bash
+    # Użyj domyślnego Ubuntu 22.04
     dockvirt up \
       --name static-site \
       --domain static-site.local \
       --image my-static-website:latest \
+      --port 80
+    ```
+
+    Lub wybierz inny system operacyjny:
+    ```bash
+    # Użyj Fedory
+    dockvirt up \
+      --name static-site-fedora \
+      --domain static-site-fedora.local \
+      --image my-static-website:latest \
       --port 80 \
-      --base-image /path/to/your/cloud-image.qcow2 \
-      --os-variant ubuntu22.04
+      --os fedora36
     ```
 
 3.  **Dodaj wpis do `/etc/hosts`**:
@@ -32,3 +42,16 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
 
 4.  **Otwórz stronę w przeglądarce**:
     Odwiedź `http://static-site.local`, aby zobaczyć swoją stronę.
+
+5.  **Usuń VM po zakończeniu**:
+    ```bash
+    dockvirt down --name static-site
+    ```
+
+## Co się dzieje w tle?
+
+Gdy uruchamiasz `dockvirt up`, narzędzie:
+1. Automatycznie pobiera obraz Ubuntu 22.04 (przy pierwszym uruchomieniu)
+2. Tworzy maszynę wirtualną z Docker i Caddy
+3. Uruchamia Twój kontener z reverse proxy
+4. Konfiguruje dostęp przez domenę
