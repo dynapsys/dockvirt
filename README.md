@@ -25,8 +25,8 @@ docker run -p 5432:5432 postgres        # Port 5432 is busy
 ### ✅ Solution: Full Isolation in a VM
 ```bash
 # With dockvirt, each application gets its own VM
-dockvirt up --name frontend --domain frontend.local --image frontend-app:latest --port 3000
-dockvirt up --name backend --domain backend.local --image backend-app:latest --port 8080  
+dockvirt up --name frontend --domain frontend.local --image nginx:latest --port 80
+dockvirt up --name backend --domain backend.local --image httpd:latest --port 80  
 dockvirt up --name db --domain db.local --image postgres:latest --port 5432
 # Each VM has its own port space - zero conflicts!
 ```
@@ -270,14 +270,17 @@ The `.dockvirt` file has priority over the default parameters, but CLI parameter
 **Scenario:** Each SaaS customer gets a completely isolated application instance in a separate VM.
 
 ```bash
+# First build your application image
+docker build -t myapp:v2.1 .
+
 # Customer A
 dockvirt up --name client-a --domain client-a.myaas.com --image myapp:v2.1 --os ubuntu22.04
 
-# Customer B  
-dockvirt up --name client-b --domain client-b.myaas.com --image myapp:v1.9 --os fedora38
+# Customer B (using different image version)
+dockvirt up --name client-b --domain client-b.myaas.com --image nginx:latest --os fedora38
 
 # Customer C (beta tester)
-dockvirt up --name client-c --domain beta.myaas.com --image myapp:v3.0-beta --os ubuntu22.04
+dockvirt up --name client-c --domain beta.myaas.com --image myapp:v2.1 --os ubuntu22.04
 ```
 
 **Result:** 
@@ -308,14 +311,16 @@ stack:
 ```
 
 ```bash
+# Note: Stack deployment is a planned feature
+# For now, create individual VMs:
+
 # Developer One
-dockvirt stack deploy dev-john
+dockvirt up --name dev-john-frontend --domain app.dev-john.local --image myapp:latest --port 3000
+dockvirt up --name dev-john-api --domain api.dev-john.local --image myapp:latest --port 8080
 
-# Developer Two
-dockvirt stack deploy dev-jane
-
-# QA environment
-dockvirt stack deploy qa-env
+# Developer Two  
+dockvirt up --name dev-jane-frontend --domain app.dev-jane.local --image myapp:latest --port 3000
+dockvirt up --name dev-jane-api --domain api.dev-jane.local --image myapp:latest --port 8080
 ```
 
 ## 📚 Detailed Examples
@@ -374,46 +379,35 @@ dockvirt up --name app2 --domain app2.local --image apache --port 80
 
 ### 📦 Distribution Packages (.deb/.rpm)
 
-```bash
-# Generate a .deb package with automatic Docker installation
-dockvirt generate-image \
-  --type deb-package \
-  --output my-app.deb \
-  --apps "nginx:latest,postgres:13" \
-  --domains "app.local,db.local"
+**Note: Image generation is a planned feature, not yet implemented**
 
-# Generate an .rpm package 
-dockvirt generate-image \
-  --type rpm-package \
-  --output my-app.rpm \
-  --apps "nginx:latest" \
-  --domains "app.local"
+```bash
+# These commands are planned for future releases:
+# dockvirt generate-image --type deb-package --output my-app.deb
+# dockvirt generate-image --type rpm-package --output my-app.rpm
+
+# For now, use standard VM deployment:
+dockvirt up --name production-app --domain app.local --image nginx:latest --port 80
 ```
 
 ### 🥧 Raspberry Pi SD Card Image
 
-```bash
-# Generate an SD card image with dockvirt pre-installed
-dockvirt generate-image \
-  --type raspberry-pi \
-  --size 8GB \
-  --output rpi-dockvirt.img \
-  --apps "nginx:latest,postgres:13" \
-  --domains "app.pi.local,db.pi.local"
+**Note: Raspberry Pi support is planned for future releases**
 
-# Flash to an SD card
-dd if=rpi-dockvirt.img of=/dev/sdX bs=4M status=progress
+```bash
+# This feature is planned for future releases:
+# dockvirt generate-image --type raspberry-pi --output rpi-dockvirt.img
+
+# For now, use standard x86_64 deployment
 ```
 
 ### 💻 PC Bootable ISO
 
+**Note: ISO generation is planned for future releases**
+
 ```bash
-# Generate a bootable ISO for a PC/server
-dockvirt generate-image \
-  --type pc-iso \
-  --size 16GB \
-  --output production-server.iso \
-  --config production-stack.yaml
+# This feature is planned for future releases:
+# dockvirt generate-image --type pc-iso --output production-server.iso
 ```
 
 **Example production-stack.yaml:**

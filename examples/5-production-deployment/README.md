@@ -68,13 +68,18 @@ set -e
 
 echo "🚀 Starting production deployment..."
 
+# Build production images first
+docker build -t nginx-lb:prod ./load-balancer
+docker build -t ecommerce-frontend:v2.1.0 ./frontend
+docker build -t ecommerce-api:v2.1.0 ./api
+
 # Load Balancer
 dockvirt up \
   --name lb-prod \
   --domain lb.prod.com \
-  --image nginx-lb:prod \
-  --port 80,443 \
-  --mem 4096 \
+  --image nginx:latest \
+  --port 80 \
+  --mem 1024 \
   --os ubuntu22.04
 
 # Frontend Cluster (3 instances)  
@@ -108,7 +113,7 @@ dockvirt up \
   --domain api1.prod.com \
   --image ecommerce-api:v2.1.0 \
   --port 8080 \
-  --mem 8192 \
+  --mem 4096 \
   --cpus 4 \
   --os fedora38
 
@@ -117,7 +122,7 @@ dockvirt up \
   --domain api2.prod.com \
   --image ecommerce-api:v2.1.0 \
   --port 8080 \
-  --mem 8192 \
+  --mem 4096 \
   --cpus 4 \
   --os fedora38
 

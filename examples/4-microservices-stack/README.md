@@ -31,6 +31,12 @@ This example demonstrates using dockvirt to run a complex microservices stack wi
 ### Option 1: Single Commands
 
 ```bash
+# Build Docker images first
+docker build -t microstack-frontend:latest ./frontend
+docker build -t microstack-api:latest ./api  
+docker build -t microstack-db:latest ./database
+docker build -t microstack-monitoring:latest ./monitoring
+
 # Frontend
 dockvirt up --name frontend --domain app.stack.local --image microstack-frontend:latest --port 3000 --os ubuntu22.04
 
@@ -38,10 +44,10 @@ dockvirt up --name frontend --domain app.stack.local --image microstack-frontend
 dockvirt up --name backend --domain api.stack.local --image microstack-api:latest --port 8080 --os fedora38
 
 # Database
-dockvirt up --name database --domain db.stack.local --image microstack-db:latest --port 5432 --os ubuntu22.04
+dockvirt up --name database --domain db.stack.local --image postgres:latest --port 5432 --os ubuntu22.04
 
 # Monitoring
-dockvirt up --name monitoring --domain mon.stack.local --image microstack-monitoring:latest --port 3000 --os ubuntu22.04
+dockvirt up --name monitoring --domain mon.stack.local --image grafana/grafana:latest --port 3000 --os ubuntu22.04
 ```
 
 ### Option 2: Stack Deployment (Planned)

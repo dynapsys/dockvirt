@@ -9,13 +9,19 @@ This example shows how to use `dockvirt` to run a simple static website served b
 
     ```bash
     cd examples/1-static-nginx-website
-    # Just run it - all parameters are in the .dockvirt file
-    # The Docker image will be built automatically inside the VM
+    
+    # First, build the Docker image
+    docker build -t my-static-website:latest .
+    
+    # Then run dockvirt - parameters are in the .dockvirt file
     dockvirt up
     ```
 
-    Or you can still use CLI parameters:
+    Or you can use CLI parameters:
     ```bash
+    # Build the image first
+    docker build -t my-static-website:latest .
+    
     # Use the default Ubuntu 22.04
     dockvirt up \
       --name static-site \

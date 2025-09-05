@@ -9,15 +9,26 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple
-from click.testing import CliRunner
-from dockvirt.cli import main as cli_main
+
+# Add the project root to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from click.testing import CliRunner
+    from dockvirt.cli import main as cli_main
+    CLI_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ CLI import failed: {e}")
+    CLI_AVAILABLE = False
+    CliRunner = None
+    cli_main = None
 
 
 class CommandTester:
     """Test runner for dockvirt commands found in README files."""
 
     def __init__(self):
-        self.runner = CliRunner()
+        self.runner = CliRunner() if CLI_AVAILABLE else None
         self.test_results: Dict[str, List[Dict]] = {}
         self.failed_commands: List[str] = []
         self.successful_commands: List[str] = []
@@ -119,7 +130,7 @@ class CommandTester:
         """Scan all README files for dockvirt commands."""
         print("📚 Scanning README files for dockvirt commands...")
         
-        readme_files = []
+        readme_files: List[Path] = []
         # Look for README files
         for pattern in ["README.md", "readme.md", "README.rst", "*.md"]:
             readme_files.extend(Path.cwd().rglob(pattern))
@@ -217,7 +228,7 @@ class CommandTester:
         
         if self.failed_commands:
             report.append("### Commands to Fix:")
-            unique_failures = {}
+            unique_failures: Dict[str, List[str]] = {}
             for file_path, results in self.test_results.items():
                 for result in results:
                     if not result["success"]:
@@ -243,17 +254,20 @@ class CommandTester:
         fixes = []
         
         # Analyze common failure patterns
-        error_patterns = {}
+        error_patterns: Dict[str, int] = {}
         for file_path, results in self.test_results.items():
             for result in results:
                 if not result["success"] and result["error"]:
                     error = result["error"].lower()
                     if "no such option" in error:
-                        error_patterns["invalid_option"] = error_patterns.get("invalid_option", 0) + 1
+                        count = error_patterns.get("invalid_option", 0)
+                        error_patterns["invalid_option"] = count + 1
                     elif "missing argument" in error:
-                        error_patterns["missing_arg"] = error_patterns.get("missing_arg", 0) + 1
+                        count = error_patterns.get("missing_arg", 0) 
+                        error_patterns["missing_arg"] = count + 1
                     elif "jinja2" in error:
-                        error_patterns["missing_jinja2"] = error_patterns.get("missing_jinja2", 0) + 1
+                        count = error_patterns.get("missing_jinja2", 0)
+                        error_patterns["missing_jinja2"] = count + 1
         
         if error_patterns.get("invalid_option", 0) > 0:
             fixes.append("Update CLI option names in README files")

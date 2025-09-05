@@ -9,6 +9,9 @@ This example shows how to run a simple Python Flask application using `dockvirt`
     Use the `.dockvirt` file for maximum convenience:
 
     ```bash
+    # First, build the Docker image
+    docker build -t my-flask-app:latest .
+    
     # Use the default configuration from the .dockvirt file
     dockvirt up
     
@@ -18,6 +21,9 @@ This example shows how to run a simple Python Flask application using `dockvirt`
 
     You can also ignore the `.dockvirt` file and use full parameters:
     ```bash
+    # Build the image first
+    docker build -t my-flask-app:latest .
+    
     # Full command with parameters
     dockvirt up \
       --name flask-app \
