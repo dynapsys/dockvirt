@@ -11,7 +11,7 @@ Ten przykład demonstruje użycie dockvirt do uruchomienia kompleksowego stosu m
 │ React App       │◄──►│ Node.js API     │◄──►│ Redis + Postgres│
 │ app.stack.local │    │ api.stack.local │    │ db.stack.local  │
 │                 │    │                 │    │                 │
-│ Ubuntu 22.04    │    │ Fedora 36       │    │ Ubuntu 22.04    │
+│ Ubuntu 22.04    │    │ Fedora 38       │    │ Ubuntu 22.04    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -35,7 +35,7 @@ Ten przykład demonstruje użycie dockvirt do uruchomienia kompleksowego stosu m
 dockvirt up --name frontend --domain app.stack.local --image microstack-frontend:latest --port 3000 --os ubuntu22.04
 
 # Backend API  
-dockvirt up --name backend --domain api.stack.local --image microstack-api:latest --port 8080 --os fedora36
+dockvirt up --name backend --domain api.stack.local --image microstack-api:latest --port 8080 --os fedora38
 
 # Database
 dockvirt up --name database --domain db.stack.local --image microstack-db:latest --port 5432 --os ubuntu22.04
@@ -82,7 +82,7 @@ name=backend
 domain=api.stack.local
 image=microstack-api:latest
 port=8080
-os=fedora36
+os=fedora38
 mem=4096
 ```
 

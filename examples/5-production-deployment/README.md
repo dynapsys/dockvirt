@@ -34,7 +34,7 @@ Demonstracja użycia dockvirt w środowisku produkcyjnym dla firmy e-commerce ob
         │   API Server  │ │ API Server  │
         │ api1.prod.com │ │api2.prod.com│
         │ Node.js + PM2 │ │Node.js + PM2│
-        │  Fedora 36    │ │  Fedora 36  │
+        │  Fedora 38    │ │  Fedora 38  │
         └───────┬───────┘ └──────┬──────┘
                 │                │
                 └────────┼───────┘
@@ -69,26 +69,92 @@ set -e
 echo "🚀 Starting production deployment..."
 
 # Load Balancer
-dockvirt up \\\n  --name lb-prod \\\n  --domain lb.prod.com \\\n  --image nginx-lb:prod \\\n  --port 80,443 \\\n  --mem 4096 \\\n  --os ubuntu22.04
+dockvirt up \
+  --name lb-prod \
+  --domain lb.prod.com \
+  --image nginx-lb:prod \
+  --port 80,443 \
+  --mem 4096 \
+  --os ubuntu22.04
 
 # Frontend Cluster (3 instances)  
-dockvirt up \\\n  --name frontend-1 \\\n  --domain app1.prod.com \\\n  --image ecommerce-frontend:v2.1.0 \\\n  --port 3000 \\\n  --mem 2048 \\\n  --os ubuntu22.04
+dockvirt up \
+  --name frontend-1 \
+  --domain app1.prod.com \
+  --image ecommerce-frontend:v2.1.0 \
+  --port 3000 \
+  --mem 2048 \
+  --os ubuntu22.04
 
-dockvirt up \\\n  --name frontend-2 \\\n  --domain app2.prod.com \\\n  --image ecommerce-frontend:v2.1.0 \\\n  --port 3000 \\\n  --mem 2048 \\\n  --os ubuntu22.04
+dockvirt up \
+  --name frontend-2 \
+  --domain app2.prod.com \
+  --image ecommerce-frontend:v2.1.0 \
+  --port 3000 \
+  --mem 2048 \
+  --os ubuntu22.04
 
-dockvirt up \\\n  --name frontend-3 \\\n  --domain app3.prod.com \\\n  --image ecommerce-frontend:v2.1.0 \\\n  --port 3000 \\\n  --mem 2048 \\\n  --os ubuntu22.04
+dockvirt up \
+  --name frontend-3 \
+  --domain app3.prod.com \
+  --image ecommerce-frontend:v2.1.0 \
+  --port 3000 \
+  --mem 2048 \
+  --os ubuntu22.04
 
-# API Cluster (2 instances)\ndockvirt up \\\n  --name api-1 \\\n  --domain api1.prod.com \\\n  --image ecommerce-api:v2.1.0 \\\n  --port 8080 \\\n  --mem 8192 \\\n  --cpus 4 \\\n  --os fedora36
+# API Cluster (2 instances)
+dockvirt up \
+  --name api-1 \
+  --domain api1.prod.com \
+  --image ecommerce-api:v2.1.0 \
+  --port 8080 \
+  --mem 8192 \
+  --cpus 4 \
+  --os fedora38
 
-dockvirt up \\\n  --name api-2 \\\n  --domain api2.prod.com \\\n  --image ecommerce-api:v2.1.0 \\\n  --port 8080 \\\n  --mem 8192 \\\n  --cpus 4 \\\n  --os fedora36
+dockvirt up \
+  --name api-2 \
+  --domain api2.prod.com \
+  --image ecommerce-api:v2.1.0 \
+  --port 8080 \
+  --mem 8192 \
+  --cpus 4 \
+  --os fedora38
 
-# Database (Primary-Secondary)\ndockvirt up \\\n  --name db-primary \\\n  --domain db.prod.com \\\n  --image postgres-ha:13 \\\n  --port 5432 \\\n  --mem 16384 \\\n  --disk 500 \\\n  --cpus 8 \\\n  --os ubuntu22.04
+# Database (Primary-Secondary)
+dockvirt up \
+  --name db-primary \
+  --domain db.prod.com \
+  --image postgres-ha:13 \
+  --port 5432 \
+  --mem 16384 \
+  --disk 500 \
+  --cpus 8 \
+  --os ubuntu22.04
 
-# Redis Cache Cluster\ndockvirt up \\\n  --name cache-cluster \\\n  --domain cache.prod.com \\\n  --image redis-cluster:7 \\\n  --port 6379 \\\n  --mem 8192 \\\n  --os ubuntu22.04
+# Redis Cache Cluster
+dockvirt up \
+  --name cache-cluster \
+  --domain cache.prod.com \
+  --image redis-cluster:7 \
+  --port 6379 \
+  --mem 8192 \
+  --os ubuntu22.04
 
-# Monitoring Stack\ndockvirt up \\\n  --name monitoring \\\n  --domain mon.prod.com \\\n  --image monitoring-stack:latest \\\n  --port 3000,9090,5601 \\\n  --mem 8192 \\\n  --disk 200 \\\n  --os ubuntu22.04
+# Monitoring Stack
+dockvirt up \
+  --name monitoring \
+  --domain mon.prod.com \
+  --image monitoring-stack:latest \
+  --port 3000,9090,5601 \
+  --mem 8192 \
+  --disk 200 \
+  --os ubuntu22.04
 
-echo \"✅ Production deployment completed!\"\necho \"🌐 Access your application at: https://lb.prod.com\"\necho \"📊 Monitoring: https://mon.prod.com\"\n```
+echo "✅ Production deployment completed!"
+echo "🌐 Access your application at: https://lb.prod.com"
+echo "📊 Monitoring: https://mon.prod.com"
+```
 
 ## 📊 Monitoring & Alerting
 

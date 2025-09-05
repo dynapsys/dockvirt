@@ -121,7 +121,7 @@ flowchart TD
     C --> D[🔨 docker build]
     D --> E{🖥️ Wybór OS}
     E -->|Ubuntu| F[🟠 dockvirt up]
-    E -->|Fedora| G[🔵 dockvirt up --os fedora36]
+    E -->|Fedora| G[🔵 dockvirt up --os fedora38]
     F --> H[🌐 Flask + Caddy]
     G --> H
     H --> I[🌍 http://flask-app.local]
@@ -132,7 +132,7 @@ flowchart TD
 
 **Porównanie systemów:**
 ```
-Ubuntu 22.04                     Fedora 36
+Ubuntu 22.04                     Fedora 38
      │                               │
      ├─ apt-get update               ├─ dnf update
      ├─ install docker               ├─ install docker
@@ -148,7 +148,7 @@ Ubuntu 22.04                     Fedora 36
 flowchart TD
     A[⚙️ ~/.dockvirt/config.yaml] --> B{🖥️ OS Selection}
     B -->|ubuntu22.04| C[🟠 Ubuntu VM]
-    B -->|fedora36| D[🔵 Fedora VM]  
+    B -->|fedora38| D[🔵 Fedora VM]  
     B -->|debian12| E[🟣 Debian VM]
     B -->|custom| F[⚪ Custom VM]
     
@@ -173,9 +173,9 @@ flowchart TD
 │   ubuntu22.04:                         │
 │     url: https://cloud-images.ubuntu... │
 │     variant: ubuntu22.04               │
-│   fedora36:                            │
+│   fedora38:                            │
 │     url: https://download.fedora...     │ 
-│     variant: fedora-cloud-base-36       │
+│     variant: fedora-cloud-base-38       │
 │   debian12:     # Twoja konfiguracja   │
 │     url: https://cloud.debian.org...    │
 │     variant: debian12                   │
@@ -217,7 +217,7 @@ dockvirt up \
   --port 80
 
 # Lub wybierz Fedorę
-dockvirt up --os fedora36
+dockvirt up --os fedora38
 ```
 
 ### 📝 Przykład pliku .dockvirt
@@ -261,7 +261,7 @@ python ../scripts/test_examples.py 1-static-nginx-website
 Script testowy sprawdza:
 - ✅ Budowanie obrazu Docker
 - ✅ Tworzenie VM z Ubuntu 22.04  
-- ✅ Tworzenie VM z Fedora 36
+- ✅ Tworzenie VM z Fedora 38
 - ✅ Dostępność HTTP aplikacji
 - ✅ Czyszczenie zasobów po testach
 

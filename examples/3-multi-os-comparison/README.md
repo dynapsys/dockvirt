@@ -91,6 +91,6 @@ Obrazy są przechowywane w `~/.dockvirt/images/`:
 ```bash
 ls -la ~/.dockvirt/images/
 # jammy-server-cloudimg-amd64.img
-# Fedora-Cloud-Base-36-1.5.x86_64.qcow2
+# Fedora-Cloud-Base-38-1.6.x86_64.qcow2
 # debian-12-generic-amd64.qcow2
 ```
