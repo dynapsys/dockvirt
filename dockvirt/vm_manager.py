@@ -34,6 +34,37 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
         app_name=name, app_image=image
     )
 
+    # Check if we're in a project directory with Dockerfile and app files
+    current_dir = Path.cwd()
+    dockerfile_content = None
+    app_files = {}
+    
+    # Look for Dockerfile in current directory
+    dockerfile_path = current_dir / "Dockerfile"
+    if dockerfile_path.exists():
+        dockerfile_content = dockerfile_path.read_text()
+        
+        # Look for common app files to copy
+        common_files = [
+            "index.html", "index.php", "app.py", "server.js", "main.py",
+            "requirements.txt", "package.json", "composer.json",
+            "nginx.conf", "apache.conf", "default.conf"
+        ]
+        
+        for filename in common_files:
+            file_path = current_dir / filename
+            if file_path.exists():
+                app_files[filename] = file_path.read_text()
+        
+        # Look for common directories to copy
+        for dir_name in ["static", "templates", "public", "www", "html"]:
+            dir_path = current_dir / dir_name
+            if dir_path.exists():
+                for file_path in dir_path.rglob("*"):
+                    if file_path.is_file():
+                        relative_path = file_path.relative_to(current_dir)
+                        app_files[str(relative_path)] = file_path.read_text()
+
     # Pobierz obraz systemu operacyjnego
     base_image = get_image_path(os_name, config)
     os_variant = config["images"][os_name]["variant"]
@@ -43,6 +74,9 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     cloudinit_rendered = Template(cloudinit_template).render(
         docker_compose_content=docker_compose_content,
         caddyfile_content=caddyfile_content,
+        dockerfile_content=dockerfile_content,
+        app_files=app_files,
+        app_image=image,
         os_family="fedora" if "fedora" in os_name else "debian",
         remote_user="fedora" if "fedora" in os_name else "ubuntu"
     )

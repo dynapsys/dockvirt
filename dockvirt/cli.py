@@ -3,6 +3,7 @@ import sys
 from .vm_manager import create_vm, destroy_vm, get_vm_ip
 from .config import load_config, load_project_config
 from .system_check import check_system_dependencies, auto_install_dependencies
+from .image_generator import generate_bootable_image
 
 
 @click.group()
@@ -100,4 +101,30 @@ def show_ip(name):
         click.echo(f"🌐 IP VM {name}: {ip}")
     else:
         click.echo(f"❌ Nie można znaleźć IP dla VM {name}")
+        sys.exit(1)
+
+
+@main.command(name="generate-image")
+@click.option("--type", "image_type", 
+              type=click.Choice(['raspberry-pi', 'pc-iso', 'deb-package', 'rpm-package']),
+              required=True, help="Typ obrazu do wygenerowania")
+@click.option("--size", default="8GB", help="Rozmiar obrazu (np. 8GB)")
+@click.option("--output", required=True, help="Nazwa pliku wyjściowego")
+@click.option("--apps", help="Lista aplikacji Docker (oddzielone przecinkami)")
+@click.option("--domains", help="Lista domen (oddzielone przecinkami)")
+@click.option("--config", help="Plik konfiguracyjny YAML")
+def generate_image(image_type, size, output, apps, domains, config):
+    """Generuje bootable obrazy, paczki deb/rpm z aplikacji Docker."""
+    try:
+        generate_bootable_image(
+            image_type=image_type,
+            size=size,
+            output_path=output,
+            apps=apps.split(',') if apps else [],
+            domains=domains.split(',') if domains else [],
+            config_file=config
+        )
+        click.echo(f"✅ Obraz {output} został wygenerowany pomyślnie!")
+    except Exception as e:
+        click.echo(f"❌ Błąd podczas generowania obrazu: {e}")
         sys.exit(1)

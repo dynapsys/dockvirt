@@ -7,29 +7,33 @@ Ten przykład pokazuje, jak łatwo przełączać się między różnymi systemam
 `dockvirt` domyślnie obsługuje:
 
 - **Ubuntu 22.04** (`ubuntu22.04`) - domyślny
-- **Fedora 36** (`fedora36`)
+- **Fedora 38** (`fedora38`)
 
 ## Szybkie testy różnych OS
+
+Ten przykład pokazuje prostą stronę HTML, która zostanie automatycznie zbudowana wewnątrz VM.
 
 ### 1. Ubuntu 22.04 (domyślny)
 
 ```bash
+cd examples/3-multi-os-comparison
 dockvirt up \
   --name ubuntu-test \
   --domain ubuntu-test.local \
-  --image nginx:latest \
+  --image multi-os-demo:latest \
   --port 80
 ```
 
-### 2. Fedora 36
+### 2. Fedora 38
 
 ```bash
+cd examples/3-multi-os-comparison
 dockvirt up \
   --name fedora-test \
   --domain fedora-test.local \
-  --image nginx:latest \
+  --image multi-os-demo:latest \
   --port 80 \
-  --os fedora36
+  --os fedora38
 ```
 
 ## Konfiguracja własnych obrazów

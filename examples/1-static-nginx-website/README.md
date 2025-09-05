@@ -4,18 +4,13 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
 
 ## Kroki do uruchomienia
 
-1.  **Zbuduj obraz Dockera**:
-    Przejdź do tego katalogu i zbuduj obraz, który będzie zawierał Twoją stronę i konfigurację Nginx:
+1.  **Uruchom VM za pomocą `dockvirt`**:
+    Przejdź do tego katalogu i uruchom `dockvirt`. Dockerfile i pliki aplikacji zostaną automatycznie skopiowane do VM i zbudowane tam:
+
     ```bash
     cd examples/1-static-nginx-website
-    docker build -t my-static-website:latest .
-    ```
-
-2.  **Uruchom VM za pomocą `dockvirt`**:
-    Najprościej używając pliku `.dockvirt` (już utworzony w tym katalogu):
-
-    ```bash
     # Po prostu uruchom - wszystkie parametry są w pliku .dockvirt
+    # Docker image zostanie zbudowany automatycznie wewnątrz VM
     dockvirt up
     ```
 
@@ -34,7 +29,7 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
       --domain static-site-fedora.local \
       --image my-static-website:latest \
       --port 80 \
-      --os fedora36
+      --os fedora38
     ```
 
 3.  **Dodaj wpis do `/etc/hosts`**:

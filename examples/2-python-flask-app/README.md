@@ -1,17 +1,11 @@
 # Przykład 2: Aplikacja webowa w Pythonie (Flask)
 
-Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą aplikację webową napisaną w Pythonie z użyciem frameworka Flask.
+Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za pomocą `dockvirt`.
 
 ## Kroki do uruchomienia
 
-1.  **Zbuduj obraz Dockera**:
-    Przejdź do tego katalogu i zbuduj obraz, który będzie zawierał Twoją aplikację i jej zależności:
-    ```bash
-    cd examples/2-python-flask-app
-    docker build -t my-flask-app:latest .
-    ```
-
-2.  **Uruchom VM za pomocą `dockvirt`**:
+1.  **Uruchom VM za pomocą `dockvirt`**:
+    Dockerfile i pliki aplikacji zostaną automatycznie skopiowane do VM i zbudowane tam:
     Wykorzystaj plik `.dockvirt` dla maksymalnej wygody:
 
     ```bash

@@ -1,12 +1,11 @@
-# Konfiguracja dla porównania systemów operacyjnych
-# Ten plik działa jak .env - definiuje domyślne wartości dla dockvirt
+# Konfiguracja dla demonstracji różnych systemów operacyjnych
+# Pokazuje możliwość łatwego przełączania między Ubuntu a Fedorą
 
-name=multi-os-test
-domain=multi-os.local
-image=nginx:latest
+name=multi-os-demo
+domain=multi-os-demo.local
+image=multi-os-demo:latest
 port=80
-os=ubuntu22.04
-
-# Inne dostępne opcje:
-# os=fedora36
-# os=debian12  # jeśli dodałeś do ~/.dockvirt/config.yaml
+# Domyślnie Ubuntu 22.04, ale można łatwo zmienić:
+# os=ubuntu22.04
+# os=fedora38
+os=ubuntu22.04  # jeśli dodałeś do ~/.dockvirt/config.yaml
