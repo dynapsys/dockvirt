@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dockvirt"
-version = "0.1.3"
+version = "0.1.5"
 authors = [
   { name="Tom Sapletta", email="info@softreck.dev" },
 ]
-description = "Uruchamianie środowisk dynadock + Caddy w izolowanych VM tworzonych przez libvirt/KVM."
+description = "Run dynadock + Caddy environments in isolated VMs created by libvirt/KVM."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [

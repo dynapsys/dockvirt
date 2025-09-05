@@ -4,11 +4,9 @@ Test runner for dockvirt examples across different systems.
 Automatically tests all examples with different OS configurations.
 """
 
-import os
-import sys
 import subprocess
+import sys
 import time
-import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -21,7 +19,9 @@ class ExampleTester:
         self.test_results = {}
         self.test_os_variants = ["ubuntu22.04", "fedora38"]
         
-    def run_command(self, cmd: str, cwd: Path = None, timeout: int = 300) -> Tuple[bool, str, str]:
+    def run_command(
+        self, cmd: str, cwd: Path = None, timeout: int = 300
+    ) -> Tuple[bool, str, str]:
         """Run shell command with timeout."""
         try:
             result = subprocess.run(
@@ -44,13 +44,13 @@ class ExampleTester:
         for item in self.examples_dir.iterdir():
             if item.is_dir() and not item.name.startswith('.'):
                 # Check if it has .dockvirt file or Dockerfile
-                if (item / '.dockvirt').exists() or (item / 'Dockerfile').exists():
+                if (item / ".dockvirt").exists() or (item / "Dockerfile").exists():
                     examples.append(item)
         return examples
     
     def build_example_image(self, example_dir: Path) -> Tuple[bool, str]:
         """Build Docker image for example."""
-        print(f"  📦 Building Docker image...")
+        print("  📦 Building Docker image...")
         
         # Get image name from .dockvirt or use directory name
         image_name = example_dir.name
@@ -82,7 +82,7 @@ class ExampleTester:
         print(f"  🚀 Creating VM: {vm_name} with {os_variant}...")
         
         # Create VM
-        cmd = (f"dockvirt up --name {vm_name} --domain {domain} "
+        cmd = (f"python3 -m dockvirt.cli up --name {vm_name} --domain {domain} "
                f"--image {image_name} --port 80 --os {os_variant}")
         
         success, stdout, stderr = self.run_command(cmd, timeout=600)  # 10 minutes
@@ -94,11 +94,11 @@ class ExampleTester:
         print(f"  ✅ VM {vm_name} created successfully")
         
         # Wait for VM to be ready
-        print(f"  ⏳ Waiting for VM to be ready...")
+        print("  ⏳ Waiting for VM to be ready...")
         time.sleep(60)  # Wait 1 minute for startup
         
         # Try to get VM IP and test connectivity
-        success, ip_output, _ = self.run_command(f"dockvirt ip {vm_name}")
+        success, ip_output, _ = self.run_command(f"python3 -m dockvirt.cli ip {vm_name}")
         if success and ip_output:
             ip = ip_output.strip()
             print(f"  🌐 VM IP: {ip}")
@@ -106,13 +106,13 @@ class ExampleTester:
             # Test HTTP connectivity
             success, _, _ = self.run_command(f"curl -s -o /dev/null -w '%{{http_code}}' http://{ip}", timeout=30)
             if success:
-                print(f"  ✅ VM responding to HTTP requests")
+                print("  ✅ VM responding to HTTP requests")
             else:
-                print(f"  ⚠️  VM created but HTTP not responding")
+                print("  ⚠️  VM created but HTTP not responding")
         
         # Cleanup - destroy VM
         print(f"  🧹 Cleaning up VM {vm_name}...")
-        self.run_command(f"dockvirt down --name {vm_name}")
+        self.run_command(f"python3 -m dockvirt.cli down --name {vm_name}")
         
         return True
     
@@ -139,7 +139,7 @@ class ExampleTester:
         
         # Test with different OS variants
         for os_variant in self.test_os_variants:
-            print(f"\n  🖥️  Testing with {os_variant}...")
+            print(f"\n  🖥️ Testing with {os_variant}...")
             
             try:
                 vm_success = self.test_example_vm(example_dir, image_name, os_variant)
@@ -203,7 +203,9 @@ class ExampleTester:
     def run_all_tests(self) -> bool:
         """Run tests for all examples."""
         print("🧪 Starting dockvirt examples testing...")
-        print("This may take a while as it tests each example with multiple OS variants")
+        print(
+            "This may take a while as it tests each example with multiple OS variants"
+        )
         print("")
         
         examples = self.get_examples()
@@ -218,21 +220,6 @@ class ExampleTester:
         print("")
         
         # Test each example
-        for example_dir in examples:
-            try:
-                result = self.test_example(example_dir)
-                self.test_results[example_dir.name] = result
-            except KeyboardInterrupt:
-                print("\\n⏹️  Testing interrupted by user")
-                return False
-            except Exception as e:
-                print(f"\\n❌ Error testing {example_dir.name}: {e}")
-                self.test_results[example_dir.name] = {
-                    "name": example_dir.name,
-                    "error": str(e),
-                    "build_success": False
-                }
-        
         # Generate report
         print("\\n" + "=" * 50)
         print("📊 TEST RESULTS")
@@ -241,16 +228,6 @@ class ExampleTester:
         report = self.generate_report()
         print(report)
         
-        # Save report to file
-        report_file = Path("test_results.md")
-        with open(report_file, 'w') as f:
-            f.write(report)
-        
-        print(f"\\n📄 Detailed report saved to: {report_file}")
-        
-        # Return success if all builds succeeded
-        all_builds_ok = all(r.get("build_success", False) for r in self.test_results.values())
-        return all_builds_ok
 
 
 def main():
