@@ -7,6 +7,7 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
 1.  **Zbuduj obraz Dockera**:
     Przejdź do tego katalogu i zbuduj obraz, który będzie zawierał Twoją stronę i konfigurację Nginx:
     ```bash
+    cd examples/1-static-nginx-website
     docker build -t my-static-website:latest .
     ```
 

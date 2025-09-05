@@ -1,5 +1,6 @@
 import click
 from .vm_manager import create_vm, destroy_vm, get_vm_ip
+from .config import load_config
 
 
 @click.group()
@@ -22,21 +23,15 @@ def main():
 @click.option("--disk", default="20", help="Dysk dla VM (GB)")
 @click.option("--cpus", default=2, help="Liczba vCPU")
 @click.option(
-    "--os-variant",
-    default="ubuntu22.04",
-    help="Wariant OS dla virt-install (np. fedora-cloud-base).",
-
+    "--os", "os_name", help="Nazwa systemu operacyjnego do użycia (np. ubuntu22.04)."
 )
-@click.option(
-    "--base-image",
-    required=True,
-    help="Ścieżka do bazowego obrazu chmurowego (qcow2).",
-)
-def up(name, domain, image, port, mem, disk, cpus, os_variant, base_image):
+def up(name, domain, image, port, mem, disk, cpus, os_name):
     """Tworzy VM w libvirt z dynadock + Caddy."""
-    create_vm(
-        name, domain, image, port, mem, disk, cpus, os_variant, base_image
-    )
+    config = load_config()
+    if not os_name:
+        os_name = config["default_os"]
+
+    create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
     ip = get_vm_ip(name)
     click.echo(f"✅ VM {name} działa pod http://{domain} ({ip})")
 

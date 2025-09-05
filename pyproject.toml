@@ -20,6 +20,7 @@ dependencies = [
     "click",
     "jinja2",
     "libvirt-python",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]
