@@ -74,9 +74,13 @@ def destroy_vm(name):
 
 
 def get_vm_ip(name):
+    """Get IP address of running VM."""
     # Wymaga zainstalowanego libvirt + dnsmasq
-    leases = run("virsh net-dhcp-leases default")
-    for line in leases.splitlines():
-        if name in line:
-            return line.split()[4].split("/")[0]
-    return "unknown"
+    try:
+        leases = run("virsh net-dhcp-leases default")
+        for line in leases.splitlines():
+            if name in line:
+                return line.split()[4].split("/")[0]
+        return "unknown"
+    except Exception:
+        return "unknown"

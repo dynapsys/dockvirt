@@ -1,6 +1,8 @@
 import click
+import sys
 from .vm_manager import create_vm, destroy_vm, get_vm_ip
 from .config import load_config, load_project_config
+from .system_check import check_system_dependencies, auto_install_dependencies
 
 
 @click.group()
@@ -39,13 +41,16 @@ def up(name, domain, image, port, mem, disk, cpus, os):
 
     # Sprawdź czy wymagane parametry są dostępne
     if not name:
-        click.echo("❌ Błąd: Brak nazwy VM. Podaj --name lub utwórz plik .dockvirt")
+        click.echo("❌ Błąd: Brak nazwy VM. "
+                   "Podaj --name lub utwórz plik .dockvirt")
         return
     if not domain:
-        click.echo("❌ Błąd: Brak domeny. Podaj --domain lub utwórz plik .dockvirt")
+        click.echo("❌ Błąd: Brak domeny. "
+                   "Podaj --domain lub utwórz plik .dockvirt")
         return
     if not image:
-        click.echo("❌ Błąd: Brak obrazu Docker. Podaj --image lub utwórz plik .dockvirt")
+        click.echo("❌ Błąd: Brak obrazu Docker. "
+                   "Podaj --image lub utwórz plik .dockvirt")
         return
 
     create_vm(name, domain, image, port, mem, disk, cpus, os, config)
@@ -59,3 +64,40 @@ def down(name):
     """Usuwa VM w libvirt."""
     destroy_vm(name)
     click.echo(f"🗑️ VM {name} została usunięta.")
+
+
+@main.command(name="check")
+def check_system():
+    """Sprawdza zależności systemu i gotowość do uruchomienia dockvirt."""
+    success = check_system_dependencies()
+    if not success:
+        click.echo("\n💡 Tip: Użyj 'dockvirt setup --install' "
+                   "dla auto-instalacji")
+        sys.exit(1)
+
+
+@main.command(name="setup")
+@click.option("--install", is_flag=True, help="Automatycznie instaluje brakujące zależności")
+def setup_system(install):
+    """Konfiguruje system dla dockvirt."""
+    if install:
+        success = auto_install_dependencies()
+        if success:
+            click.echo("\n✅ Konfiguracja zakończona pomyślnie!")
+        else:
+            click.echo("\n❌ Wystąpiły problemy podczas instalacji")
+            sys.exit(1)
+    else:
+        check_system_dependencies()
+
+
+@main.command(name="ip")
+@click.option("--name", required=True, help="Nazwa VM")
+def show_ip(name):
+    """Pokazuje adres IP VM."""
+    ip = get_vm_ip(name)
+    if ip != "unknown":
+        click.echo(f"🌐 IP VM {name}: {ip}")
+    else:
+        click.echo(f"❌ Nie można znaleźć IP dla VM {name}")
+        sys.exit(1)
