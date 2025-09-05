@@ -13,7 +13,7 @@ Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za po
     dockvirt up
     
     # Lub zmień OS na Fedorę (edytuj .dockvirt lub użyj parametru)
-    dockvirt up --os fedora36
+    dockvirt up --os fedora38
     ```
 
     Możesz też ignorować plik `.dockvirt` i używać pełnych parametrów:
@@ -27,16 +27,16 @@ Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za po
       --os ubuntu22.04
     ```
 
-3.  **Dodaj wpis do `/etc/hosts`**:
+2.  **Dodaj wpis do `/etc/hosts`**:
     Po uzyskaniu adresu IP od `dockvirt`, dodaj go do swojego pliku `/etc/hosts`:
     ```
     <adres_ip> flask-app.local
     ```
 
-4.  **Otwórz aplikację w przeglądarce**:
+3.  **Otwórz aplikację w przeglądarce**:
     Odwiedź `http://flask-app.local`, aby zobaczyć swoją aplikację.
 
-5.  **Usuń VM po zakończeniu**:
+4.  **Usuń VM po zakończeniu**:
     ```bash
     dockvirt down --name flask-app
     ```
@@ -45,6 +45,16 @@ Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za po
 
 Przy pierwszym uruchomieniu `dockvirt` automatycznie pobierze potrzebny obraz systemu operacyjnego:
 - Ubuntu 22.04: `~/.dockvirt/images/jammy-server-cloudimg-amd64.img`
-- Fedora 36: `~/.dockvirt/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2`
+- Fedora 38: `~/.dockvirt/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2`
 
 Obrazy są buforowane lokalnie, więc kolejne uruchomienia będą znacznie szybsze.
+
+## Co się dzieje w tle?
+
+Gdy uruchamiasz `dockvirt up`, narzędzie:
+1. Automatycznie pobiera obraz Ubuntu 22.04 lub Fedora 38 (przy pierwszym uruchomieniu)
+2. Kopiuje Dockerfile, app.py, requirements.txt i inne pliki aplikacji do VM
+3. Tworzy maszynę wirtualną z Docker i Caddy
+4. Buduje Docker image z aplikacją Flask wewnątrz VM
+5. Uruchamia kontener z aplikacją z reverse proxy
+6. Konfiguruje dostęp przez domenę

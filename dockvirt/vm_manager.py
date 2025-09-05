@@ -38,24 +38,24 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     current_dir = Path.cwd()
     dockerfile_content = None
     app_files = {}
-    
+
     # Look for Dockerfile in current directory
     dockerfile_path = current_dir / "Dockerfile"
     if dockerfile_path.exists():
         dockerfile_content = dockerfile_path.read_text()
-        
+
         # Look for common app files to copy
         common_files = [
             "index.html", "index.php", "app.py", "server.js", "main.py",
             "requirements.txt", "package.json", "composer.json",
             "nginx.conf", "apache.conf", "default.conf"
         ]
-        
+
         for filename in common_files:
             file_path = current_dir / filename
             if file_path.exists():
                 app_files[filename] = file_path.read_text()
-        
+
         # Look for common directories to copy
         for dir_name in ["static", "templates", "public", "www", "html"]:
             dir_path = current_dir / dir_name
@@ -68,7 +68,7 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     # Pobierz obraz systemu operacyjnego
     base_image = get_image_path(os_name, config)
     os_variant = config["images"][os_name]["variant"]
-    
+
     # Render cloud-init config (user-data)
     cloudinit_template = (templates_dir / "cloud-init.yaml.j2").read_text()
     cloudinit_rendered = Template(cloudinit_template).render(

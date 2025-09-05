@@ -194,12 +194,27 @@ images:
   ubuntu22.04:
     url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
     variant: ubuntu22.04
-  fedora36:
-    url: https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2
-    variant: fedora-cloud-base-36
+  fedora38:
+    url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
+    variant: fedora-cloud-base-38
 ```
 
 ## 🖥️ Użycie
+
+### 🚀 Nowy workflow - Docker build w VM
+
+**Od teraz Docker images budują się automatycznie wewnątrz VM!** Nie musisz już budować obrazów na hoście.
+
+```bash
+# Stary sposób (już niepotrzebny):
+# docker build -t my-app:latest .
+# dockvirt up --image my-app:latest
+
+# Nowy sposób - po prostu uruchom:
+cd my-project/  # katalog z Dockerfile
+dockvirt up --name my-app --domain my-app.local --image my-app:latest --port 80
+# Dockerfile i pliki automatycznie kopiowane do VM i budowane tam!
+```
 
 ### 🚀 Szybkie uruchomienie z plikiem .dockvirt
 
@@ -210,12 +225,12 @@ Najprostszy sposób to utworzenie pliku `.dockvirt` w katalogu projektu (jak `.e
 cat > .dockvirt << EOF
 name=my-app
 domain=my-app.local
-image=nginx:latest
+image=my-app:latest
 port=80
 os=ubuntu22.04
 EOF
 
-# Teraz wystarczy:
+# Teraz wystarczy (w katalogu z Dockerfile):
 dockvirt up
 ```
 
@@ -235,7 +250,7 @@ dockvirt up \
   --domain fedora-app.local \
   --image httpd:latest \
   --port 80 \
-  --os fedora36
+  --os fedora38
 ```
 
 ### 🌐 Dostęp do aplikacji
@@ -259,7 +274,7 @@ Plik `.dockvirt` ma priorytet nad parametrami domyślnymi, ale parametry CLI zas
 dockvirt up --name client-a --domain client-a.myaas.com --image myapp:v2.1 --os ubuntu22.04
 
 # Klient B  
-dockvirt up --name client-b --domain client-b.myaas.com --image myapp:v1.9 --os fedora36
+dockvirt up --name client-b --domain client-b.myaas.com --image myapp:v1.9 --os fedora38
 
 # Klient C (beta tester)
 dockvirt up --name client-c --domain beta.myaas.com --image myapp:v3.0-beta --os ubuntu22.04
@@ -289,7 +304,7 @@ stack:
   database:
     image: postgres:15
     domain: db.dev.local
-    os: fedora36
+    os: fedora38
 ```
 
 ```bash
@@ -355,7 +370,25 @@ dockvirt up --name app2 --domain app2.local --image apache --port 80
 # Oba działają bez konfliktów!
 ```
 
-## 💾 Bootable Images dla Raspberry Pi / PC
+## 💾 Generowanie obrazów i paczek
+
+### 📦 Paczki dystrybucyjne (.deb/.rpm)
+
+```bash
+# Generuj paczkę .deb z automatyczną instalacją Docker
+dockvirt generate-image \
+  --type deb-package \
+  --output my-app.deb \
+  --apps "nginx:latest,postgres:13" \
+  --domains "app.local,db.local"
+
+# Generuj paczkę .rpm 
+dockvirt generate-image \
+  --type rpm-package \
+  --output my-app.rpm \
+  --apps "nginx:latest" \
+  --domains "app.local"
+```
 
 ### 🥧 Raspberry Pi SD Card Image
 

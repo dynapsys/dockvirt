@@ -46,9 +46,9 @@ images:
   ubuntu22.04:
     url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
     variant: ubuntu22.04
-  fedora36:
-    url: https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2
-    variant: fedora-cloud-base-36
+  fedora38:
+    url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
+    variant: fedora-cloud-base-38
   # Dodaj własny obraz
   debian12:
     url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
@@ -74,7 +74,7 @@ Możesz uruchomić te same aplikacje na różnych systemach operacyjnych, aby po
 time dockvirt up --name perf-ubuntu --domain ubuntu.local --image nginx:latest --port 80
 
 # Test na Fedorze  
-time dockvirt up --name perf-fedora --domain fedora.local --image nginx:latest --port 80 --os fedora36
+time dockvirt up --name perf-fedora --domain fedora.local --image nginx:latest --port 80 --os fedora38
 ```
 
 ## Czyszczenie
