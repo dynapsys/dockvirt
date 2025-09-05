@@ -3,21 +3,21 @@
 .PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system
 
 help:
-	@echo "Dostępne komendy:"
-	@echo "  install         - Instaluje zależności produkcyjne i deweloperskie"
-	@echo "  dev-setup       - Pełna konfiguracja środowiska deweloperskiego"
-	@echo "  build           - Buduje paczkę Pythona"
-	@echo "  test-e2e        - Uruchamia testy end-to-end"
-	@echo "  lint            - Sprawdza kod linterm (flake8, black)"
-	@echo "  format          - Formatuje kod (black, isort)"
-	@echo "  version-show    - Pokazuje aktualną wersję"
-	@echo "  version-patch   - Zwiększa wersję patch (0.1.0 -> 0.1.1)"
-	@echo "  version-minor   - Zwiększa wersję minor (0.1.0 -> 0.2.0)"
-	@echo "  version-major   - Zwiększa wersję major (0.1.0 -> 1.0.0)"
-	@echo "  publish         - Automatycznie zwiększa patch i publikuje do PyPI"
-	@echo "  clean           - Usuwa artefakty budowania i pliki tymczasowe"
-	@echo "  install-system  - Instaluje zależności systemowe (Docker, libvirt)"
-	@echo "  test-examples   - Testuje wszystkie examples na różnych systemach"
+	@echo "Available commands:"
+	@echo "  install         - Installs production and development dependencies"
+	@echo "  dev-setup       - Full setup of the development environment"
+	@echo "  build           - Builds the Python package"
+	@echo "  test-e2e        - Runs end-to-end tests"
+	@echo "  lint            - Checks the code with a linter (flake8, black)"
+	@echo "  format          - Formats the code (black, isort)"
+	@echo "  version-show    - Shows the current version"
+	@echo "  version-patch   - Bumps the patch version (0.1.0 -> 0.1.1)"
+	@echo "  version-minor   - Bumps the minor version (0.1.0 -> 0.2.0)"
+	@echo "  version-major   - Bumps the major version (0.1.0 -> 1.0.0)"
+	@echo "  publish         - Automatically bumps the patch version and publishes to PyPI"
+	@echo "  clean           - Removes build artifacts and temporary files"
+	@echo "  install-system  - Installs system dependencies (Docker, libvirt)"
+	@echo "  test-examples   - Tests all examples on different systems"
 
 install:
 	pip install -e .[dev]
@@ -62,53 +62,53 @@ version-major:
 	new_version="$$((major + 1)).0.0"; \
 	echo "Zwiększam wersję z $$current_version na $$new_version"; \
 	sed -i "s/version = \"$$current_version\"/version = \"$$new_version\"/" pyproject.toml; \
-	echo "✅ Wersja zaktualizowana na $$new_version"
+	echo "✅ Version updated to $$new_version"
 
-# Dodatkowe narzędzia deweloperskie
+# Additional development tools
 dev-setup: install
-	@echo "🔧 Konfigurowanie środowiska deweloperskiego..."
+	@echo "🔧 Setting up the development environment..."
 	pip install flake8 black isort
-	@echo "✅ Środowisko deweloperskie gotowe"
+	@echo "✅ Development environment ready"
 
 lint:
-	@echo "🔍 Sprawdzanie kodu linterem..."
+	@echo "🔍 Linting the code..."
 	flake8 dockvirt/ --max-line-length=88 --ignore=E203,W503
 	black --check dockvirt/
 	isort --check-only dockvirt/
 
 format:
-	@echo "🎨 Formatowanie kodu..."
+	@echo "🎨 Formatting the code..."
 	black dockvirt/
 	isort dockvirt/
-	@echo "✅ Kod sformatowany"
+	@echo "✅ Code formatted"
 
-# Publikowanie z automatycznym wersjonowaniem
+# Publishing with automatic versioning
 publish: clean version-patch build
-	@echo "📦 Publikowanie paczki do PyPI..."
+	@echo "📦 Publishing package to PyPI..."
 	@new_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
-	echo "Publikuję wersję $$new_version"; \
+	echo "Publishing version $$new_version"; \
 	twine upload dist/*; \
-	echo "✅ Wersja $$new_version opublikowana do PyPI"
+	echo "✅ Version $$new_version published to PyPI"
 
 clean:
-	@echo "🧹 Czyszczenie artefaktów..."
+	@echo "🧹 Cleaning artifacts..."
 	rm -rf build dist *.egg-info
 	find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -exec rm -f {} + 2>/dev/null || true
-	@echo "✅ Artefakty wyczyszczone"
+	@echo "✅ Artifacts cleaned"
 
-# Instalacja zależności systemowych
+# Installing system dependencies
 install-system:
-	@echo "🔧 Instalowanie zależności systemowych..."
+	@echo "🔧 Installing system dependencies..."
 	./scripts/install.sh
-	@echo "✅ Instalacja systemowa zakończona"
+	@echo "✅ System installation complete"
 
-# Testowanie examples
-test-examples:
-	@echo "🧪 Testowanie wszystkich examples..."
+# Testing examples
+test-examples: install
+	@echo "🧪 Testing all examples..."
 	python3 scripts/test_examples.py
 
-repair:
+repair: install
 	@echo "🔧 Repairing commands from READMEs..."
 	python3 scripts/test_commands.py
-	@echo "✅ Testowanie zakończone - sprawdź test_results.md"
+	@echo "✅ Testing complete - check test_results.md"
