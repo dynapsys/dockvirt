@@ -1,9 +1,17 @@
 import click
 import sys
+import logging
 from .vm_manager import create_vm, destroy_vm, get_vm_ip
 from .config import load_config, load_project_config
 from .system_check import check_system_dependencies, auto_install_dependencies
 from .image_generator import generate_bootable_image
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -24,6 +32,7 @@ def main():
 @click.option("--cpus", default=2, help="Number of vCPUs")
 def up(name, domain, image, port, os_name, mem, disk, cpus):
     """Creates a VM in libvirt with dynadock + Caddy."""
+    logger.info(f"Starting VM creation with parameters: name={name}, domain={domain}, image={image}, port={port}")
     config = load_config()
     project_config = load_project_config()
     # Use values from the local .dockvirt file as defaults
