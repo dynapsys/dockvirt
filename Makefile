@@ -1,6 +1,6 @@
 # Makefile for dockvirt
 
-.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format
+.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system
 
 help:
 	@echo "Dostępne komendy:"
@@ -16,6 +16,8 @@ help:
 	@echo "  version-major   - Zwiększa wersję major (0.1.0 -> 1.0.0)"
 	@echo "  publish         - Automatycznie zwiększa patch i publikuje do PyPI"
 	@echo "  clean           - Usuwa artefakty budowania i pliki tymczasowe"
+	@echo "  install-system  - Instaluje zależności systemowe (Docker, libvirt)"
+	@echo "  test-examples   - Testuje wszystkie examples na różnych systemach"
 
 install:
 	pip install -e .[dev]
@@ -94,3 +96,15 @@ clean:
 	find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -exec rm -f {} + 2>/dev/null || true
 	@echo "✅ Artefakty wyczyszczone"
+
+# Instalacja zależności systemowych
+install-system:
+	@echo "🔧 Instalowanie zależności systemowych..."
+	./scripts/install.sh
+	@echo "✅ Instalacja systemowa zakończona"
+
+# Testowanie examples
+test-examples:
+	@echo "🧪 Testowanie wszystkich examples..."
+	python3 scripts/test_examples.py
+	@echo "✅ Testowanie zakończone - sprawdź test_results.md"

@@ -184,6 +184,15 @@ flowchart TD
 
 ## 🚀 Szybki start
 
+### 🔍 Sprawdź gotowość systemu
+```bash
+# Sprawdź czy wszystkie zależności są zainstalowane
+dockvirt check
+
+# Jeśli coś brakuje, zainstaluj automatycznie
+dockvirt setup --install
+```
+
 ### Opcja 1: Użyj pliku .dockvirt (rekomendowane)
 
 ```bash
@@ -226,15 +235,35 @@ os=ubuntu22.04
 
 Przed uruchomieniem przykładów upewnij się, że masz:
 - Zainstalowany `dockvirt`: `pip install dockvirt`
-- Docker do budowania obrazów aplikacji
-- Odpowiednie uprawnienia do uruchamiania VM (libvirt)
+- Wszystkie zależności: `dockvirt check`
+- Jeśli coś brakuje: `dockvirt setup --install`
+
+### 📊 Automatyczne testowanie
+```bash
+# Testuj wszystkie przykłady na różnych systemach OS
+python ../scripts/test_examples.py
+
+# Testuj tylko jeden przykład
+python ../scripts/test_examples.py 1-static-nginx-website
+
+# Raport z testów zostanie zapisany w test_results.md
+```
 
 ## 💡 Wskazówki
 
-1. **Pierwsze uruchomienie**: Może trwać dłużej z powodu pobierania obrazów OS
-2. **Cache**: Kolejne uruchomienia będą znacznie szybsze dzięki lokalnym obrazom
-3. **Debugowanie**: Użyj `virsh list --all` aby zobaczyć wszystkie VM
-4. **Czyszczenie**: Zawsze używaj `dockvirt down --name <nazwa>` aby usunąć VM
+- Każdy przykład ma swój plik `.dockvirt` z domyślnymi parametrami
+- Możesz edytować `.dockvirt` aby zmienić nazwę VM, port, lub OS
+- Użyj `dockvirt down --name <nazwa>` aby usunąć VM
+- Użyj `dockvirt ip --name <nazwa>` aby sprawdzić IP VM
+- Przykłady działają zarówno z Ubuntu jak i Fedora
+
+### 🧪 Testowanie kompatybilności
+Script testowy sprawdza:
+- ✅ Budowanie obrazu Docker
+- ✅ Tworzenie VM z Ubuntu 22.04  
+- ✅ Tworzenie VM z Fedora 36
+- ✅ Dostępność HTTP aplikacji
+- ✅ Czyszczenie zasobów po testach
 
 ## 🆘 Pomoc
 
