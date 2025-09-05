@@ -1,0 +1,6 @@
+# Dockvirt project configuration
+name=dockvirt-test
+domain=dockvirt.local
+image=nginx:latest
+port=80
+os=ubuntu22.04
