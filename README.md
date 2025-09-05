@@ -54,21 +54,99 @@ Pomysł na `dockvirt` narodził się z potrzeby stworzenia prostego, ale potęż
     make install
     ```
 
+## 🏗️ Jak to działa?
+
+### Przepływ procesu tworzenia VM
+
+```mermaid
+graph TD
+    A[dockvirt up] --> B{Czy istnieje config.yaml?}
+    B -->|Nie| C[Utwórz domyślny config.yaml]
+    B -->|Tak| D[Wczytaj konfigurację]
+    C --> D
+    D --> E{Czy obraz OS istnieje lokalnie?}
+    E -->|Nie| F[Pobierz obraz z URL]
+    E -->|Tak| G[Użyj lokalnego obrazu]
+    F --> G
+    G --> H[Renderuj szablony cloud-init]
+    H --> I[Utwórz ISO cloud-init]
+    I --> J[Utwórz dysk VM z backing file]
+    J --> K[Uruchom virt-install]
+    K --> L[VM gotowa z Docker + Caddy]
+```
+
+### Architektura systemu
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          HOST SYSTEM                           │
+├─────────────────────────────────────────────────────────────────┤
+│  dockvirt CLI                                                   │
+│  ├── config.py         (zarządzanie konfiguracją)              │
+│  ├── image_manager.py  (pobieranie obrazów OS)                 │
+│  ├── vm_manager.py     (tworzenie/usuwanie VM)                 │
+│  └── cli.py           (interfejs użytkownika)                  │
+├─────────────────────────────────────────────────────────────────┤
+│  ~/.dockvirt/                                                   │
+│  ├── config.yaml      (konfiguracja domyślna)                  │
+│  ├── images/          (cache obrazów OS)                       │
+│  └── vm_name/         (pliki cloud-init dla każdej VM)         │
+├─────────────────────────────────────────────────────────────────┤
+│  libvirt/KVM                                                    │
+│  ├── virt-install     (tworzenie VM)                           │
+│  ├── virsh            (zarządzanie VM)                         │
+│  └── qemu-kvm         (wirtualizacja)                          │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        VIRTUAL MACHINE                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Ubuntu/Fedora OS + cloud-init                                 │
+│  ├── Docker Engine    (automatycznie zainstalowany)           │
+│  └── docker-compose   (uruchamia kontenery)                   │
+│      ├── Caddy        (reverse proxy na porcie 80/443)        │
+│      └── App Container (Twoja aplikacja)                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## ⚙️ Konfiguracja
+
+`dockvirt` automatycznie tworzy plik konfiguracyjny `~/.dockvirt/config.yaml` przy pierwszym uruchomieniu:
+
+```yaml
+default_os: ubuntu22.04
+images:
+  ubuntu22.04:
+    url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+    variant: ubuntu22.04
+  fedora36:
+    url: https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.qcow2
+    variant: fedora-cloud-base-36
+```
+
 ## 🖥️ Użycie
 
-Aby utworzyć nową maszynę wirtualną, użyj polecenia `dockvirt up`.
+Teraz używanie `dockvirt` jest znacznie prostsze - nie musisz już podawać ścieżek do obrazów:
 
 ```bash
+# Użyj domyślnego OS (ubuntu22.04)
 dockvirt up \
   --name my-app \
   --domain my-app.local \
   --image nginx:latest \
+  --port 80
+
+# Lub wybierz konkretny OS
+dockvirt up \
+  --name fedora-app \
+  --domain fedora-app.local \
+  --image httpd:latest \
   --port 80 \
-  --base-image /path/to/ubuntu-22.04.qcow2 \
-  --os-variant ubuntu22.04
+  --os fedora36
 ```
 
-Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/hosts`, aby uzyskać dostęp przez domenę:
+Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/hosts`:
 
 ```
 <adres_ip> my-app.local

@@ -2,6 +2,8 @@ import subprocess
 from pathlib import Path
 from jinja2 import Template
 
+from .image_manager import get_image_path
+
 BASE_DIR = Path.home() / ".dockvirt"
 
 
@@ -12,7 +14,7 @@ def run(cmd):
     return result.stdout.strip()
 
 
-def create_vm(name, domain, image, port, mem, disk, cpus, os_variant, base_image):
+def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     BASE_DIR.mkdir(parents=True, exist_ok=True)
     vm_dir = BASE_DIR / name
     vm_dir.mkdir(exist_ok=True)
@@ -32,13 +34,17 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_variant, base_image
         app_name=name, app_image=image
     )
 
+    # Pobierz obraz systemu operacyjnego
+    base_image = get_image_path(os_name, config)
+    os_variant = config["images"][os_name]["variant"]
+    
     # Render cloud-init config (user-data)
     cloudinit_template = (templates_dir / "cloud-init.yaml.j2").read_text()
     cloudinit_rendered = Template(cloudinit_template).render(
         docker_compose_content=docker_compose_content,
         caddyfile_content=caddyfile_content,
-        os_family="fedora" if "fedora" in os_variant else "debian",
-        remote_user="fedora" if "fedora" in os_variant else "ubuntu"
+        os_family="fedora" if "fedora" in os_name else "debian",
+        remote_user="fedora" if "fedora" in os_name else "ubuntu"
     )
     (vm_dir / "user-data").write_text(cloudinit_rendered)
     metadata_content = f"instance-id: {name}\nlocal-hostname: {name}\n"

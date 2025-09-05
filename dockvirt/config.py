@@ -1,4 +1,4 @@
-import yaml
+import yaml  # type: ignore
 from pathlib import Path
 
 CONFIG_DIR = Path.home() / ".dockvirt"

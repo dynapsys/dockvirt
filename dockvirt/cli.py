@@ -23,7 +23,8 @@ def main():
 @click.option("--disk", default="20", help="Dysk dla VM (GB)")
 @click.option("--cpus", default=2, help="Liczba vCPU")
 @click.option(
-    "--os", "os_name", help="Nazwa systemu operacyjnego do użycia (np. ubuntu22.04)."
+    "--os", "os_name", 
+    help="Nazwa systemu operacyjnego do użycia (np. ubuntu22.04)."
 )
 def up(name, domain, image, port, mem, disk, cpus, os_name):
     """Tworzy VM w libvirt z dynadock + Caddy."""
