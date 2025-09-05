@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dockvirt-libvirt"
+version = "0.1.0"
+authors = [
+  { name="Cascade", email="cascade@windsurf.ai" },
+]
+description = "Uruchamianie środowisk dynadock + Caddy w izolowanych VM tworzonych przez libvirt/KVM."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "click",
+    "jinja2",
+    "libvirt-python",
+]
+
+[project.scripts]
+dockvirt = "dockvirt.cli:main"

@@ -1,0 +1,18 @@
+#cloud-config
+package_update: true
+packages:
+  - docker.io
+  - python3-pip
+
+write_files:
+  - path: /home/ubuntu/docker-compose.yml
+    content: |
+{{ docker_compose_content | indent(6) }}
+  - path: /home/ubuntu/Caddyfile
+    content: |
+{{ caddyfile_content | indent(6) }}
+
+runcmd:
+  - chown ubuntu:ubuntu /home/ubuntu/docker-compose.yml
+  - chown ubuntu:ubuntu /home/ubuntu/Caddyfile
+  - cd /home/ubuntu && docker compose up -d
