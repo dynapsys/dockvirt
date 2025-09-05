@@ -1,8 +1,8 @@
-# 🌐 Mikrousługi Stack - Zaawansowany przykład
+# 🌐 Microservices Stack - Advanced Example
 
-Ten przykład demonstruje użycie dockvirt do uruchomienia kompleksowego stosu mikrousług z wieloma VM.
+This example demonstrates using dockvirt to run a complex microservices stack with multiple VMs.
 
-## 🏗️ Architektura
+## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -26,9 +26,9 @@ Ten przykład demonstruje użycie dockvirt do uruchomienia kompleksowego stosu m
                     └─────────────────┘
 ```
 
-## 🚀 Szybkie uruchomienie
+## 🚀 Quick Start
 
-### Opcja 1: Pojedyncze komendy
+### Option 1: Single Commands
 
 ```bash
 # Frontend
@@ -44,27 +44,27 @@ dockvirt up --name database --domain db.stack.local --image microstack-db:latest
 dockvirt up --name monitoring --domain mon.stack.local --image microstack-monitoring:latest --port 3000 --os ubuntu22.04
 ```
 
-### Opcja 2: Stack deployment (planowane)
+### Option 2: Stack Deployment (Planned)
 
 ```bash
-# Wdroż cały stack jedną komendą
+# Deploy the entire stack with one command
 dockvirt stack deploy microservices-stack.yaml
 ```
 
-## 📦 Budowanie obrazów
+## 📦 Building Images
 
 ```bash
-# Build wszystkich komponentów
+# Build all components
 make build-all
 
-# Lub pojedynczo
+# Or individually
 docker build -t microstack-frontend:latest ./frontend/
 docker build -t microstack-api:latest ./backend/
 docker build -t microstack-db:latest ./database/
 docker build -t microstack-monitoring:latest ./monitoring/
 ```
 
-## 🔧 Konfiguracja
+## 🔧 Configuration
 
 ### Frontend (.dockvirt-frontend)
 ```
@@ -107,9 +107,9 @@ os=ubuntu22.04
 mem=2048
 ```
 
-## 🌍 Dostęp do aplikacji
+## 🌍 Accessing the Application
 
-Po uruchomieniu, dodaj do `/etc/hosts`:
+After startup, add the following to `/etc/hosts`:
 
 ```
 <IP_FRONTEND>    app.stack.local
@@ -118,23 +118,23 @@ Po uruchomieniu, dodaj do `/etc/hosts`:
 <IP_MONITORING>  mon.stack.local
 ```
 
-Następnie otwórz:
-- **Aplikacja:** http://app.stack.local
+Then open:
+- **Application:** http://app.stack.local
 - **API Docs:** http://api.stack.local/docs
 - **Monitoring:** http://mon.stack.local
 
-## 📊 Monitorowanie
+## 📊 Monitoring
 
-Grafana dashboards dostępne pod http://mon.stack.local:
-- **Application Metrics** - wydajność frontendu i backendu
-- **Infrastructure** - metryki VM (CPU, RAM, disk)
-- **Database Performance** - PostgreSQL i Redis stats
-- **Network Traffic** - komunikacja między serwisami
+Grafana dashboards are available at http://mon.stack.local:
+- **Application Metrics** - frontend and backend performance
+- **Infrastructure** - VM metrics (CPU, RAM, disk)
+- **Database Performance** - PostgreSQL and Redis stats
+- **Network Traffic** - communication between services
 
-## 🧪 Testowanie
+## 🧪 Testing
 
 ```bash
-# Test całego stosu
+# Test the entire stack
 curl http://api.stack.local/health
 curl http://app.stack.local/api/status
 
@@ -145,7 +145,7 @@ ab -n 1000 -c 10 http://api.stack.local/api/users
 curl http://mon.stack.local/api/health
 ```
 
-## 🔄 Automatyzacja CI/CD
+## 🔄 CI/CD Automation
 
 ### GitHub Actions Example
 
@@ -181,34 +181,34 @@ jobs:
           curl -f http://app.stack.local/
 ```
 
-## 🗑️ Czyszczenie
+## 🗑️ Cleanup
 
 ```bash
-# Usuń wszystkie VM ze stosu
+# Remove all VMs from the stack
 dockvirt down --name frontend
 dockvirt down --name backend  
 dockvirt down --name database
 dockvirt down --name monitoring
 
-# Lub jedną komendą (planowane)
+# Or with a single command (planned)
 dockvirt stack destroy microservices-stack
 ```
 
-## 💡 Wskazówki produkcyjne
+## 💡 Production Tips
 
-1. **Persistent Storage**: Użyj większych dysków dla bazy danych
-2. **Backup**: Regularnie rób kopie zapasowe VM
-3. **SSL**: Caddy automatycznie obsługuje Let's Encrypt
-4. **Scaling**: Dodaj load balancer VM dla większego ruchu
-5. **Security**: Używaj różnych sieci dla różnych warstw
+1. **Persistent Storage**: Use larger disks for the database
+2. **Backup**: Regularly back up the VMs
+3. **SSL**: Caddy automatically handles Let's Encrypt
+4. **Scaling**: Add a load balancer VM for higher traffic
+5. **Security**: Use different networks for different layers
 
 ## 🚨 Troubleshooting
 
-**Problem:** Serwisy nie mogą się komunikować  
-**Rozwiązanie:** Sprawdź czy wszystkie VM są w tej samej sieci libvirt
+**Problem:** Services cannot communicate  
+**Solution:** Check if all VMs are on the same libvirt network
 
-**Problem:** Brak dostępu z zewnątrz  
-**Rozwiązanie:** Sprawdź /etc/hosts i upewnij się że VM mają przydzielone IP
+**Problem:** No external access  
+**Solution:** Check /etc/hosts and make sure the VMs have been assigned IPs
 
-**Problem:** Wysoka latencja  
-**Rozwiązanie:** Zwiększ RAM dla VM lub użyj SSD storage
+**Problem:** High latency  
+**Solution:** Increase the VM's RAM or use SSD storage

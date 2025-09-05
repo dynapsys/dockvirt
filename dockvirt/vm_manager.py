@@ -10,7 +10,7 @@ BASE_DIR = Path.home() / ".dockvirt"
 def run(cmd):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
-        raise RuntimeError(f"Błąd: {result.stderr}")
+        raise RuntimeError(f"Error: {result.stderr}")
     return result.stdout.strip()
 
 
@@ -34,12 +34,12 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
         app_name=name, app_image=image
     )
 
-    # Check if we're in a project directory with Dockerfile and app files
+    # Check if we're in a project directory with a Dockerfile and app files
     current_dir = Path.cwd()
     dockerfile_content = None
     app_files = {}
 
-    # Look for Dockerfile in current directory
+    # Look for Dockerfile in the current directory
     dockerfile_path = current_dir / "Dockerfile"
     if dockerfile_path.exists():
         dockerfile_content = dockerfile_path.read_text()
@@ -65,7 +65,7 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
                         relative_path = file_path.relative_to(current_dir)
                         app_files[str(relative_path)] = file_path.read_text()
 
-    # Pobierz obraz systemu operacyjnego
+    # Get the operating system image
     base_image = get_image_path(os_name, config)
     os_variant = config["images"][os_name]["variant"]
 
@@ -108,8 +108,8 @@ def destroy_vm(name):
 
 
 def get_vm_ip(name):
-    """Get IP address of running VM."""
-    # Wymaga zainstalowanego libvirt + dnsmasq
+    """Get the IP address of a running VM."""
+    # Requires libvirt + dnsmasq to be installed
     try:
         leases = run("virsh net-dhcp-leases default")
         for line in leases.splitlines():

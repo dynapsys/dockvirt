@@ -1,19 +1,19 @@
-# Przykład 3: Porównanie różnych systemów operacyjnych
+# Example 3: Comparing Different Operating Systems
 
-Ten przykład pokazuje, jak łatwo przełączać się między różnymi systemami operacyjnymi w `dockvirt` oraz jak skonfigurować własne obrazy.
+This example shows how to easily switch between different operating systems in `dockvirt` and how to configure your own images.
 
-## Dostępne systemy operacyjne
+## Available Operating Systems
 
-`dockvirt` domyślnie obsługuje:
+`dockvirt` supports the following by default:
 
-- **Ubuntu 22.04** (`ubuntu22.04`) - domyślny
+- **Ubuntu 22.04** (`ubuntu22.04`) - default
 - **Fedora 38** (`fedora38`)
 
-## Szybkie testy różnych OS
+## Quick Tests of Different OS
 
-Ten przykład pokazuje prostą stronę HTML, która zostanie automatycznie zbudowana wewnątrz VM.
+This example shows a simple HTML page that will be automatically built inside the VM.
 
-### 1. Ubuntu 22.04 (domyślny)
+### 1. Ubuntu 22.04 (default)
 
 ```bash
 cd examples/3-multi-os-comparison
@@ -36,9 +36,9 @@ dockvirt up \
   --os fedora38
 ```
 
-## Konfiguracja własnych obrazów
+## Configuring Custom Images
 
-Możesz dodać własne obrazy, edytując plik `~/.dockvirt/config.yaml`:
+You can add your own images by editing the `~/.dockvirt/config.yaml` file:
 
 ```yaml
 default_os: ubuntu22.04
@@ -49,13 +49,13 @@ images:
   fedora38:
     url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
     variant: fedora-cloud-base-38
-  # Dodaj własny obraz
+  # Add your own image
   debian12:
     url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
     variant: debian12
 ```
 
-Następnie użyj:
+Then use:
 ```bash
 dockvirt up \
   --name debian-test \
@@ -65,19 +65,19 @@ dockvirt up \
   --os debian12
 ```
 
-## Porównanie wydajności
+## Performance Comparison
 
-Możesz uruchomić te same aplikacje na różnych systemach operacyjnych, aby porównać wydajność:
+You can run the same applications on different operating systems to compare performance:
 
 ```bash
-# Test na Ubuntu
+# Test on Ubuntu
 time dockvirt up --name perf-ubuntu --domain ubuntu.local --image nginx:latest --port 80
 
-# Test na Fedorze  
+# Test on Fedora  
 time dockvirt up --name perf-fedora --domain fedora.local --image nginx:latest --port 80 --os fedora38
 ```
 
-## Czyszczenie
+## Cleanup
 
 ```bash
 dockvirt down --name ubuntu-test
@@ -85,9 +85,9 @@ dockvirt down --name fedora-test
 dockvirt down --name debian-test
 ```
 
-## Cache obrazów
+## Image Cache
 
-Obrazy są przechowywane w `~/.dockvirt/images/`:
+Images are stored in `~/.dockvirt/images/`:
 ```bash
 ls -la ~/.dockvirt/images/
 # jammy-server-cloudimg-amd64.img

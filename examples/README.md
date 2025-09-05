@@ -1,10 +1,10 @@
-# Przykłady użycia dockvirt
+# dockvirt Usage Examples
 
-Ten katalog zawiera praktyczne przykłady pokazujące różne sposoby użycia `dockvirt` z nowym, uproszczonym API.
+This directory contains practical examples showing different ways to use `dockvirt` with the new, simplified API.
 
-## 🏗️ Jak działa dockvirt?
+## 🏗️ How does dockvirt work?
 
-### Architektura systemu
+### System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -18,14 +18,14 @@ Ten katalog zawiera praktyczne przykłady pokazujące różne sposoby użycia `d
 │  └─────────────┘ └─────────────┘ └─────────────┘               │
 ├─────────────────────────────────────────────────────────────────┤
 │  ~/.dockvirt/                                                   │
-│  ├── 📋 config.yaml    (konfiguracja)                          │
-│  ├── 📁 images/        (cache obrazów OS)                      │
-│  └── 📁 vm_name/       (pliki cloud-init)                      │
+│  ├── 📋 config.yaml    (configuration)                         │
+│  ├── 📁 images/        (OS image cache)                        │
+│  └── 📁 vm_name/       (cloud-init files)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  🔄 libvirt/KVM                                                 │
-│  ├── virt-install → tworzy VM                                  │
-│  ├── virsh        → zarządza VM                                │
-│  └── qemu-kvm     → uruchamia VM                               │
+│  ├── virt-install → creates VM                                 │
+│  ├── virsh        → manages VM                                 │
+│  └── qemu-kvm     → runs VM                                  │
 └─────────────────────────────────────────────────────────────────┘
                                │
                                ▼
@@ -43,43 +43,43 @@ Ten katalog zawiera praktyczne przykłady pokazujące różne sposoby użycia `d
                                     🌍 http://app.local
 ```
 
-### Przepływ tworzenia VM
+### VM Creation Flow
 
 ```mermaid
 flowchart TD
-    A[🚀 dockvirt up] --> B{📋 config.yaml istnieje?}
-    B -->|❌ Nie| C[📝 Utwórz domyślny config]
-    B -->|✅ Tak| D[📖 Wczytaj konfigurację]
+    A[🚀 dockvirt up] --> B{📋 config.yaml exists?}
+    B -->|❌ No| C[📝 Create default config]
+    B -->|✅ Yes| D[📖 Load configuration]
     C --> D
     
-    D --> E{🖼️ Obraz OS lokalnie?}
-    E -->|❌ Nie| F[📥 Pobierz z internetu]
-    E -->|✅ Tak| G[💾 Użyj lokalnego]
+    D --> E{🖼️ OS image local?}
+    E -->|❌ No| F[📥 Download from internet]
+    E -->|✅ Yes| G[💾 Use local]
     F --> |⏳ wget/curl| G
     
-    G --> H[🔧 Renderuj cloud-init]
-    H --> I[💿 Utwórz ISO cloud-init]
-    I --> J[💽 Utwórz dysk VM]
+    G --> H[🔧 Render cloud-init]
+    H --> I[💿 Create cloud-init ISO]
+    I --> J[💽 Create VM disk]
     J --> K[⚡ virt-install]
     K --> L[🐳 VM + Docker + Caddy]
-    L --> M[🌐 Aplikacja dostępna!]
+    L --> M[🌐 Application available!]
     
     style A fill:#e1f5fe
     style M fill:#c8e6c9
     style F fill:#fff3e0
 ```
 
-## 🆕 Co nowego?
+## 🆕 What's new?
 
-Wszystkie przykłady zostały zaktualizowane, aby korzystać z najnowszych funkcji:
+All examples have been updated to use the latest features:
 
-- **Automatyczne pobieranie obrazów OS** - nie musisz już ręcznie pobierać plików `.qcow2`
-- **System konfiguracji** - `~/.dockvirt/config.yaml` z predefiniowanymi ustawieniami
-- **Uproszczone CLI** - zamiast `--base-image` i `--os-variant`, wystarczy `--os`
+- **Automatic OS image downloads** - you no longer need to manually download `.qcow2` files
+- **Configuration system** - `~/.dockvirt/config.yaml` with predefined settings
+- **Simplified CLI** - instead of `--base-image` and `--os-variant`, just use `--os`
 
-## 📋 Lista przykładów
+## 📋 List of examples
 
-### [1. Statyczna strona na Nginx](./1-static-nginx-website/)
+### [1. Static Nginx Website](./1-static-nginx-website/)
 
 ```mermaid
 flowchart LR
@@ -94,7 +94,7 @@ flowchart LR
     style G fill:#c8e6c9
 ```
 
-**Przepływ przykładu:**
+**Example flow:**
 ```
 Developer      Docker         dockvirt       libvirt        Browser
     │              │              │             │              │
@@ -112,14 +112,14 @@ Developer      Docker         dockvirt       libvirt        Browser
     │              │              │             │              │
 ```
 
-### [2. Aplikacja webowa w Pythonie (Flask)](./2-python-flask-app/)
+### [2. Python (Flask) Web Application](./2-python-flask-app/)
 
 ```mermaid
 flowchart TD
     A[🐍 Python Flask App] --> B[📋 requirements.txt]
     B --> C[🐳 Dockerfile]
     C --> D[🔨 docker build]
-    D --> E{🖥️ Wybór OS}
+    D --> E{🖥️ Choose OS}
     E -->|Ubuntu| F[🟠 dockvirt up]
     E -->|Fedora| G[🔵 dockvirt up --os fedora38]
     F --> H[🌐 Flask + Caddy]
@@ -130,7 +130,7 @@ flowchart TD
     style I fill:#c8e6c9
 ```
 
-**Porównanie systemów:**
+**System comparison:**
 ```
 Ubuntu 22.04                     Fedora 38
      │                               │
@@ -142,7 +142,7 @@ Ubuntu 22.04                     Fedora 38
      └─ ~2-3 min startup             └─ ~2-4 min startup
 ```
 
-### [3. Porównanie systemów operacyjnych](./3-multi-os-comparison/)
+### [3. Operating System Comparison](./3-multi-os-comparison/)
 
 ```mermaid
 flowchart TD
@@ -163,7 +163,7 @@ flowchart TD
     style H fill:#c8e6c9
 ```
 
-**Konfiguracja systemu:**
+**System configuration:**
 ```
 ┌─────────────────────────────────────────┐
 │ ~/.dockvirt/config.yaml                 │
@@ -176,51 +176,51 @@ flowchart TD
 │   fedora38:                            │
 │     url: https://download.fedora...     │ 
 │     variant: fedora-cloud-base-38       │
-│   debian12:     # Twoja konfiguracja   │
+│   debian12:     # Your configuration   │
 │     url: https://cloud.debian.org...    │
 │     variant: debian12                   │
 └─────────────────────────────────────────┘
 ```
 
-## 🚀 Szybki start
+## 🚀 Quick start
 
-### 🔍 Sprawdź gotowość systemu
+### 🔍 Check system readiness
 ```bash
-# Sprawdź czy wszystkie zależności są zainstalowane
+# Check if all dependencies are installed
 dockvirt check
 
-# Jeśli coś brakuje, zainstaluj automatycznie
+# If something is missing, install automatically
 dockvirt setup --install
 ```
 
-### Opcja 1: Użyj pliku .dockvirt (rekomendowane)
+### Option 1: Use a .dockvirt file (recommended)
 
 ```bash
-# Przejdź do dowolnego przykładu
+# Go to any example
 cd examples/1-static-nginx-website
 
-# Zbuduj obraz Dockera
+# Build the Docker image
 docker build -t my-static-website:latest .
 
-# Po prostu uruchom - parametry są w pliku .dockvirt
+# Just run - the parameters are in the .dockvirt file
 dockvirt up
 ```
 
-### Opcja 2: Tradycyjne parametry CLI
+### Option 2: Traditional CLI parameters
 
 ```bash
-# Uruchom z domyślnym Ubuntu 22.04
+# Run with default Ubuntu 22.04
 dockvirt up \
   --name my-test \
   --domain my-test.local \
   --image example-app:latest \
   --port 80
 
-# Lub wybierz Fedorę
+# Or choose Fedora
 dockvirt up --os fedora38
 ```
 
-### 📝 Przykład pliku .dockvirt
+### 📝 Example .dockvirt file
 
 ```bash
 # .dockvirt
@@ -231,44 +231,44 @@ port=80
 os=ubuntu22.04
 ```
 
-## 🔧 Wymagania
+## 🔧 Requirements
 
-Przed uruchomieniem przykładów upewnij się, że masz:
-- Zainstalowany `dockvirt`: `pip install dockvirt`
-- Wszystkie zależności: `dockvirt check`
-- Jeśli coś brakuje: `dockvirt setup --install`
+Before running the examples, make sure you have:
+- `dockvirt` installed: `pip install dockvirt`
+- All dependencies: `dockvirt check`
+- If something is missing: `dockvirt setup --install`
 
-### 📊 Automatyczne testowanie
+### 📊 Automatic testing
 ```bash
-# Testuj wszystkie przykłady na różnych systemach OS
+# Test all examples on different OS
 python ../scripts/test_examples.py
 
-# Testuj tylko jeden przykład
+# Test only one example
 python ../scripts/test_examples.py 1-static-nginx-website
 
-# Raport z testów zostanie zapisany w test_results.md
+# The test report will be saved in test_results.md
 ```
 
-## 💡 Wskazówki
+## 💡 Tips
 
-- Każdy przykład ma swój plik `.dockvirt` z domyślnymi parametrami
-- Możesz edytować `.dockvirt` aby zmienić nazwę VM, port, lub OS
-- Użyj `dockvirt down --name <nazwa>` aby usunąć VM
-- Użyj `dockvirt ip --name <nazwa>` aby sprawdzić IP VM
-- Przykłady działają zarówno z Ubuntu jak i Fedora
+- Each example has its own `.dockvirt` file with default parameters
+- You can edit `.dockvirt` to change the VM name, port, or OS
+- Use `dockvirt down --name <name>` to remove a VM
+- Use `dockvirt ip --name <name>` to check the VM's IP
+- The examples work with both Ubuntu and Fedora
 
-### 🧪 Testowanie kompatybilności
-Script testowy sprawdza:
-- ✅ Budowanie obrazu Docker
-- ✅ Tworzenie VM z Ubuntu 22.04  
-- ✅ Tworzenie VM z Fedora 38
-- ✅ Dostępność HTTP aplikacji
-- ✅ Czyszczenie zasobów po testach
+### 🧪 Compatibility testing
+The test script checks:
+- ✅ Building the Docker image
+- ✅ Creating a VM with Ubuntu 22.04  
+- ✅ Creating a VM with Fedora 38
+- ✅ HTTP availability of the application
+- ✅ Cleaning up resources after tests
 
-## 🆘 Pomoc
+## 🆘 Help
 
-Jeśli napotkasz problemy:
-1. Sprawdź czy libvirt działa: `sudo systemctl status libvirtd`
-2. Sprawdź logi VM: `virsh console <nazwa-vm>`
-3. Zobacz konfigurację: `cat ~/.dockvirt/config.yaml`
-4. Sprawdź pobrane obrazy: `ls -la ~/.dockvirt/images/`
+If you encounter problems:
+1. Check if libvirt is running: `sudo systemctl status libvirtd`
+2. Check the VM logs: `virsh console <vm-name>`
+3. See the configuration: `cat ~/.dockvirt/config.yaml`
+4. Check the downloaded images: `ls -la ~/.dockvirt/images/`

@@ -52,7 +52,7 @@ def is_libvirt_installed():
 
 
 def is_cloud_utils_installed():
-    """Check if cloud-localds is available."""
+    """Checks if the cloud-localds tool is available."""
     success, _, _ = run_command("which cloud-localds")
     return success
 
@@ -60,18 +60,18 @@ def is_cloud_utils_installed():
 def check_kvm_support():
     """Check if KVM virtualization is available."""
     if is_wsl():
-        return False, "KVM nie jest dostępne w WSL (używa Hyper-V)"
+        return False, "KVM is not available in WSL (uses Hyper-V)"
     
     # Check if /dev/kvm exists
     if not Path("/dev/kvm").exists():
-        return False, "Brak /dev/kvm - sprawdź czy virtualizacja jest włączona w BIOS"
+        return False, "/dev/kvm not found - check if virtualization is enabled in BIOS"
     
     # Check if user is in kvm group
     success, groups, _ = run_command("groups")
     if "kvm" not in groups:
-        return False, "Użytkownik nie jest w grupie 'kvm'"
+        return False, "User is not in the 'kvm' group"
     
-    return True, "KVM jest dostępne"
+    return True, "KVM is available"
 
 
 def get_os_info():
@@ -136,7 +136,7 @@ def generate_install_commands(os_id, missing_deps):
         if 'cloud-utils' in missing_deps:
             commands.extend([
                 "# Install cloud-utils",
-                "sudo dnf install -y cloud-utils",
+                "sudo dnf install -y cloud-utils-growpart",
             ])
     
     elif os_id == 'arch':
@@ -164,8 +164,8 @@ def generate_install_commands(os_id, missing_deps):
     if commands:
         commands.extend([
             "",
-            "# Po instalacji wyloguj się i zaloguj ponownie aby grupy zaczęły działać",
-            "# lub uruchom: newgrp docker && newgrp libvirt && newgrp kvm",
+            "# After installation, log out and log back in for group changes to take effect",
+            "# or run: newgrp docker && newgrp libvirt && newgrp kvm",
         ])
     
     return commands
@@ -173,7 +173,7 @@ def generate_install_commands(os_id, missing_deps):
 
 def check_system_dependencies():
     """Comprehensive system dependency check."""
-    print("🔍 Sprawdzanie zależności systemu dla dockvirt...")
+    print("🔍 Checking system dependencies for dockvirt...")
     print("=" * 50)
     
     # Basic system info
@@ -182,7 +182,7 @@ def check_system_dependencies():
     
     print(f"💻 System: {os_id} {os_version}")
     if wsl:
-        print("🪟 Wykryto WSL (Windows Subsystem for Linux)")
+        print("🪟 WSL (Windows Subsystem for Linux) detected")
     print()
     
     # Check dependencies
@@ -191,23 +191,23 @@ def check_system_dependencies():
     
     # Docker check
     if is_docker_installed():
-        print("✅ Docker: Zainstalowany i dostępny")
+        print("✅ Docker: Installed and available")
     else:
-        print("❌ Docker: Brak lub niedostępny")
+        print("❌ Docker: Not found or inaccessible")
         missing_deps.append('docker')
     
     # Libvirt check  
     if is_libvirt_installed():
-        print("✅ Libvirt: Zainstalowane")
+        print("✅ Libvirt: Installed")
     else:
-        print("❌ Libvirt: Brak narzędzi (virsh, virt-install, qemu-img)")
+        print("❌ Libvirt: Tools not found (virsh, virt-install, qemu-img)")
         missing_deps.append('libvirt')
     
     # Cloud utils check
     if is_cloud_utils_installed():
-        print("✅ Cloud-utils: Zainstalowane")
+        print("✅ Cloud-utils: Installed")
     else:
-        print("❌ Cloud-utils: Brak cloud-localds")
+        print("❌ Cloud-utils: cloud-localds not found")
         missing_deps.append('cloud-utils')
     
     # KVM check
@@ -222,17 +222,17 @@ def check_system_dependencies():
     
     # WSL specific instructions
     if wsl:
-        print("🪟 **INSTRUKCJE DLA WSL/Windows:**")
-        print("1. Upewnij się że Hyper-V jest włączone w Windows")
-        print("2. Uruchom PowerShell jako Administrator i wykonaj:")
+        print("🪟 **INSTRUCTIONS FOR WSL/Windows:**")
+        print("1. Make sure Hyper-V is enabled in Windows Features")
+        print("2. Run PowerShell as Administrator and execute:")
         print("   Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform")
-        print("3. Dockvirt będzie używał Hyper-V zamiast KVM")
-        print("4. Dla najlepszej wydajności rozważ użycie Docker Desktop")
+        print("3. Dockvirt will use Hyper-V instead of KVM")
+        print("4. For best performance, consider using Docker Desktop")
         print()
     
     # Installation commands
     if missing_deps:
-        print("🔧 **KOMENDY INSTALACYJNE:**")
+        print("🔧 **INSTALLATION COMMANDS:**")
         install_commands = generate_install_commands(os_id, missing_deps)
         for cmd in install_commands:
             print(cmd)
@@ -240,19 +240,19 @@ def check_system_dependencies():
     
     # Summary
     if not missing_deps and not issues:
-        print("🎉 Wszystkie zależności są spełnione!")
+        print("🎉 All dependencies are met!")
         return True
     elif missing_deps:
-        print(f"⚠️  Brakuje zależności: {', '.join(missing_deps)}")
+        print(f"⚠️  Missing dependencies: {', '.join(missing_deps)}")
         return False
     else:
-        print("⚠️  System gotowy z drobnymi problemami")
+        print("⚠️  System ready with minor issues")
         return True
 
 
 def auto_install_dependencies():
     """Interactive auto-installation of dependencies."""
-    print("🚀 Rozpoczynam auto-instalację zależności...")
+    print("🚀 Starting automatic dependency installation...")
     
     os_id, _ = get_os_info()
     missing_deps = []
@@ -265,14 +265,14 @@ def auto_install_dependencies():
         missing_deps.append('cloud-utils')
     
     if not missing_deps:
-        print("✅ Wszystkie zależności już zainstalowane!")
+        print("✅ All dependencies are already installed!")
         return True
     
-    print(f"📦 Brakujące zależności: {', '.join(missing_deps)}")
-    response = input("Czy chcesz je zainstalować automatycznie? (t/N): ")
+    print(f"📦 Missing dependencies: {', '.join(missing_deps)}")
+    response = input("Do you want to install them automatically? (y/N): ")
     
-    if response.lower() not in ['t', 'tak', 'y', 'yes']:
-        print("Anulowano auto-instalację")
+    if response.lower() not in ['y', 'yes']:
+        print("Auto-installation cancelled")
         return False
     
     install_commands = generate_install_commands(os_id, missing_deps)
@@ -282,16 +282,16 @@ def auto_install_dependencies():
             print(cmd)
             continue
         
-        print(f"Wykonuję: {cmd}")
+        print(f"Executing: {cmd}")
         success, stdout, stderr = run_command(cmd, capture_output=False)
         
         if not success:
-            print(f"❌ Błąd wykonania: {cmd}")
+            print(f"❌ Error executing: {cmd}")
             print(f"Stderr: {stderr}")
             return False
     
-    print("✅ Auto-instalacja zakończona!")
-    print("🔄 Wyloguj się i zaloguj ponownie aby grupy zaczęły działać")
+    print("✅ Auto-installation finished!")
+    print("🔄 Please log out and log back in for group changes to take effect")
     return True
 
 

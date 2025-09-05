@@ -1,12 +1,12 @@
 # 🏭 Production Deployment - Enterprise Example
 
-Przykład pełnego wdrożenia produkcyjnego z wysoką dostępnością, monitoringiem i backup.
+An example of a full production deployment with high availability, monitoring, and backup.
 
-## 🎯 Cel
+## 🎯 Goal
 
-Demonstracja użycia dockvirt w środowisku produkcyjnym dla firmy e-commerce obsługującej 10k+ użytkowników dziennie.
+A demonstration of using dockvirt in a production environment for an e-commerce company serving 10k+ users daily.
 
-## 🏗️ Architektura Production
+## 🏗️ Production Architecture
 
 ```
                     🌐 Internet
@@ -196,13 +196,13 @@ echo "📊 Monitoring: https://mon.prod.com"
 
 ### VM Optimization
 
-```bash\n# Wysokowydajne VM dla bazy danych\ndockvirt up \\\n  --name db-optimized \\\n  --domain db.prod.com \\\n  --image postgres-tuned:13 \\\n  --mem 32768 \\\n  --cpus 16 \\\n  --disk 1000 \\\n  --disk-type ssd \\\n  --cpu-model host-passthrough \\\n  --os ubuntu22.04\n```\n\n### Cache Configuration\n\n```redis\n# Redis optimization\nmaxmemory 6gb\nmaxmemory-policy allkeys-lru\nsave 900 1\nsave 300 10\nsave 60 10000\n```
+```bash\n# High-performance VM for the database\ndockvirt up \\\n  --name db-optimized \\\n  --domain db.prod.com \\\n  --image postgres-tuned:13 \\\n  --mem 32768 \\\n  --cpus 16 \\\n  --disk 1000 \\\n  --disk-type ssd \\\n  --cpu-model host-passthrough \\\n  --os ubuntu22.04\n```\n\n### Cache Configuration\n\n```redis\n# Redis optimization\nmaxmemory 6gb\nmaxmemory-policy allkeys-lru\nsave 900 1\nsave 300 10\nsave 60 10000\n```
 
 ## 📈 Scaling Strategy
 
 ### Horizontal Scaling
 
-```bash\n# Dodaj nowy frontend node\ndockvirt up \\\n  --name frontend-4 \\\n  --domain app4.prod.com \\\n  --image ecommerce-frontend:v2.1.0 \\\n  --port 3000 \\\n  --mem 2048 \\\n  --os ubuntu22.04\n\n# Zaktualizuj load balancer\ndockvirt exec lb-prod -- update-upstream app4.prod.com\n```
+```bash\n# Add a new frontend node\ndockvirt up \\\n  --name frontend-4 \\\n  --domain app4.prod.com \\\n  --image ecommerce-frontend:v2.1.0 \\\n  --port 3000 \\\n  --mem 2048 \\\n  --os ubuntu22.04\n\n# Update the load balancer\ndockvirt exec lb-prod -- update-upstream app4.prod.com\n```
 
 ### Auto-scaling (Planned Feature)
 

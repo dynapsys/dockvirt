@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
 
 
 def load_project_config():
-    """Ładuje konfigurację z lokalnego pliku .dockvirt w projekcie."""
+    """Loads configuration from a local .dockvirt file in the project."""
     project_config_path = Path.cwd() / PROJECT_CONFIG_FILE
     if project_config_path.exists():
         config = {}
@@ -40,12 +40,12 @@ def load_project_config():
 
 
 def load_config():
-    """Alias dla get_merged_config dla kompatybilności."""
+    """Alias for get_merged_config for compatibility."""
     return get_merged_config()
 
 
 def get_merged_config():
-    # Wczytaj globalną konfigurację
+    # Load global configuration
     if not CONFIG_PATH.exists():
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         with open(CONFIG_PATH, "w") as f:
@@ -55,10 +55,10 @@ def get_merged_config():
         with open(CONFIG_PATH, "r") as f:
             global_config = yaml.safe_load(f)
 
-    # Wczytaj lokalną konfigurację projektu
+    # Load local project configuration
     project_config = load_project_config()
 
-    # Połącz konfiguracje - lokalny projekt ma priorytet
+    # Merge configurations - local project has priority
     merged_config = global_config.copy()
     if project_config:
         for key, value in project_config.items():

@@ -1,24 +1,24 @@
-# Przykład 2: Aplikacja webowa w Pythonie (Flask)
+# Example 2: Python (Flask) Web Application
 
-Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za pomocą `dockvirt`.
+This example shows how to run a simple Python Flask application using `dockvirt`.
 
-## Kroki do uruchomienia
+## Steps to Run
 
-1.  **Uruchom VM za pomocą `dockvirt`**:
-    Dockerfile i pliki aplikacji zostaną automatycznie skopiowane do VM i zbudowane tam:
-    Wykorzystaj plik `.dockvirt` dla maksymalnej wygody:
+1.  **Start the VM with `dockvirt`**:
+    The Dockerfile and application files will be automatically copied to the VM and built there:
+    Use the `.dockvirt` file for maximum convenience:
 
     ```bash
-    # Użyj domyślnej konfiguracji z pliku .dockvirt
+    # Use the default configuration from the .dockvirt file
     dockvirt up
     
-    # Lub zmień OS na Fedorę (edytuj .dockvirt lub użyj parametru)
+    # Or change the OS to Fedora (edit .dockvirt or use the parameter)
     dockvirt up --os fedora38
     ```
 
-    Możesz też ignorować plik `.dockvirt` i używać pełnych parametrów:
+    You can also ignore the `.dockvirt` file and use full parameters:
     ```bash
-    # Pełna komenda z parametrami
+    # Full command with parameters
     dockvirt up \
       --name flask-app \
       --domain flask-app.local \
@@ -27,34 +27,34 @@ Ten przykład pokazuje, jak uruchomić prostą aplikację Flask w Pythonie za po
       --os ubuntu22.04
     ```
 
-2.  **Dodaj wpis do `/etc/hosts`**:
-    Po uzyskaniu adresu IP od `dockvirt`, dodaj go do swojego pliku `/etc/hosts`:
+2.  **Add an entry to `/etc/hosts`**:
+    After getting the IP address from `dockvirt`, add it to your `/etc/hosts` file:
     ```
-    <adres_ip> flask-app.local
+    <ip_address> flask-app.local
     ```
 
-3.  **Otwórz aplikację w przeglądarce**:
-    Odwiedź `http://flask-app.local`, aby zobaczyć swoją aplikację.
+3.  **Open the application in your browser**:
+    Visit `http://flask-app.local` to see your application.
 
-4.  **Usuń VM po zakończeniu**:
+4.  **Destroy the VM when finished**:
     ```bash
     dockvirt down --name flask-app
     ```
 
-## Automatyczne pobieranie obrazów
+## Automatic Image Downloading
 
-Przy pierwszym uruchomieniu `dockvirt` automatycznie pobierze potrzebny obraz systemu operacyjnego:
+On the first run, `dockvirt` will automatically download the required operating system image:
 - Ubuntu 22.04: `~/.dockvirt/images/jammy-server-cloudimg-amd64.img`
 - Fedora 38: `~/.dockvirt/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2`
 
-Obrazy są buforowane lokalnie, więc kolejne uruchomienia będą znacznie szybsze.
+Images are cached locally, so subsequent runs will be much faster.
 
-## Co się dzieje w tle?
+## What's happening in the background?
 
-Gdy uruchamiasz `dockvirt up`, narzędzie:
-1. Automatycznie pobiera obraz Ubuntu 22.04 lub Fedora 38 (przy pierwszym uruchomieniu)
-2. Kopiuje Dockerfile, app.py, requirements.txt i inne pliki aplikacji do VM
-3. Tworzy maszynę wirtualną z Docker i Caddy
-4. Buduje Docker image z aplikacją Flask wewnątrz VM
-5. Uruchamia kontener z aplikacją z reverse proxy
-6. Konfiguruje dostęp przez domenę
+When you run `dockvirt up`, the tool:
+1. Automatically downloads the Ubuntu 22.04 or Fedora 38 image (on first run)
+2. Copies the Dockerfile, app.py, requirements.txt, and other application files to the VM
+3. Creates a virtual machine with Docker and Caddy
+4. Builds a Docker image with the Flask application inside the VM
+5. Starts the application container with a reverse proxy
+6. Configures access via the domain

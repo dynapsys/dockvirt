@@ -1,29 +1,29 @@
-# Przykład 1: Statyczna strona na Nginx
+# Example 1: Static Nginx Website
 
-Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę statyczną serwowaną przez serwer Nginx.
+This example shows how to use `dockvirt` to run a simple static website served by an Nginx server.
 
-## Kroki do uruchomienia
+## Steps to Run
 
-1.  **Uruchom VM za pomocą `dockvirt`**:
-    Przejdź do tego katalogu i uruchom `dockvirt`. Dockerfile i pliki aplikacji zostaną automatycznie skopiowane do VM i zbudowane tam:
+1.  **Start the VM with `dockvirt`**:
+    Navigate to this directory and run `dockvirt`. The Dockerfile and application files will be automatically copied to the VM and built there:
 
     ```bash
     cd examples/1-static-nginx-website
-    # Po prostu uruchom - wszystkie parametry są w pliku .dockvirt
-    # Docker image zostanie zbudowany automatycznie wewnątrz VM
+    # Just run it - all parameters are in the .dockvirt file
+    # The Docker image will be built automatically inside the VM
     dockvirt up
     ```
 
-    Lub nadal możesz używać parametrów CLI:
+    Or you can still use CLI parameters:
     ```bash
-    # Użyj domyślnego Ubuntu 22.04
+    # Use the default Ubuntu 22.04
     dockvirt up \
       --name static-site \
       --domain static-site.local \
       --image my-static-website:latest \
       --port 80
 
-    # Lub użyj Fedory
+    # Or use Fedora
     dockvirt up \
       --name static-site-fedora \
       --domain static-site-fedora.local \
@@ -32,26 +32,26 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
       --os fedora38
     ```
 
-2.  **Dodaj wpis do `/etc/hosts`**:
-    Po uzyskaniu adresu IP od `dockvirt`, dodaj go do swojego pliku `/etc/hosts`:
+2.  **Add an entry to `/etc/hosts`**:
+    After getting the IP address from `dockvirt`, add it to your `/etc/hosts` file:
     ```
-    <adres_ip> static-site.local
+    <ip_address> static-site.local
     ```
 
-3.  **Otwórz stronę w przeglądarce**:
-    Odwiedź `http://static-site.local`, aby zobaczyć swoją stronę.
+3.  **Open the site in your browser**:
+    Visit `http://static-site.local` to see your site.
 
-4.  **Usuń VM po zakończeniu**:
+4.  **Destroy the VM when finished**:
     ```bash
     dockvirt down --name static-site
     ```
 
-## Co się dzieje w tle?
+## What's happening in the background?
 
-Gdy uruchamiasz `dockvirt up`, narzędzie:
-1. Automatycznie pobiera obraz Ubuntu 22.04 (przy pierwszym uruchomieniu)
-2. Kopiuje Dockerfile i pliki aplikacji do VM
-3. Tworzy maszynę wirtualną z Docker i Caddy
-4. Buduje Docker image wewnątrz VM
-5. Uruchamia Twój kontener z reverse proxy
-6. Konfiguruje dostęp przez domenę
+When you run `dockvirt up`, the tool:
+1. Automatically downloads the Ubuntu 22.04 image (on first run)
+2. Copies the Dockerfile and application files to the VM
+3. Creates a virtual machine with Docker and Caddy
+4. Builds the Docker image inside the VM
+5. Starts your container with a reverse proxy
+6. Configures access via the domain

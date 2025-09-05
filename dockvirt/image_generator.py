@@ -12,13 +12,19 @@ import yaml
 from pathlib import Path
 
 
-def generate_bootable_image(image_type="raspberry-pi", size="8GB", output_path="dockvirt.img", 
-                         apps=None, domains=None, config_file=None):
+def generate_bootable_image(
+    image_type="raspberry-pi",
+    size="8GB",
+    output_path="dockvirt.img",
+    apps=None,
+    domains=None,
+    config_file=None,
+):
     """Generate bootable image with dockvirt configuration."""
     supported_types = ['raspberry-pi', 'pc-iso', 'deb-package', 'rpm-package']
     
     if image_type not in supported_types:
-        raise ValueError(f"Unsupported image type: {image_type}. Supported: {supported_types}")
+        raise ValueError(f"Unsupported image type: {image_type}. Supported types are: {supported_types}")
     
     if apps is None:
         apps = []
@@ -77,7 +83,7 @@ Description: DockerVirt application package
         f.write(control_content)
         
     # Create post-install script
-    postinst_content = f"""#!/bin/bash
+    postinst_content = """#!/bin/bash
 set -e
 
 # Install dockvirt if not already installed
@@ -211,7 +217,7 @@ def _generate_rpi_image(temp_dir, size, output_path, apps, domains, config):
     extracted_image = temp_dir / "raspios-lite.img"
     
     # Create cloud-init config for automatic setup
-    cloud_init_content = f"""#cloud-config
+    cloud_init_content = """#cloud-config
 users:
   - default
   - name: dockvirt
@@ -242,7 +248,7 @@ runcmd:
     
     shutil.copy(str(extracted_image), output_path)
     print(f"✅ Raspberry Pi image created: {output_path}")
-    print("⚠️  Manual setup required: Copy cloud-init files to boot partition")
+    print("⚠️  Manual setup required: Copy cloud-init files to the boot partition")
     return output_path
 
 
@@ -299,7 +305,7 @@ def generate_image_cli(image_type, size, output, config_file, apps, domains):
     domain_list = domains.split(',') if domains else []
     
     if len(app_list) != len(domain_list):
-        raise ValueError("Number of apps must match number of domains")
+        raise ValueError("The number of apps must match the number of domains")
     
     # Generate image using the main function
     return generate_bootable_image(
@@ -317,7 +323,7 @@ if __name__ == "__main__":
     
     if len(sys.argv) < 4:
         print("Usage: python image_generator.py <type> <size> <output> [config.yaml]")
-        print("Types: raspberry-pi, pc-iso, usb-stick")
+        print("Types: raspberry-pi, pc-iso, deb-package, rpm-package")
         sys.exit(1)
     
     image_type = sys.argv[1]

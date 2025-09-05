@@ -3,77 +3,77 @@
 [![PyPI version](https://badge.fury.io/py/dockvirt.svg)](https://badge.fury.io/py/dockvirt)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Twórz lekkie, izolowane środowiska deweloperskie za pomocą jednego polecenia.**
+**Create lightweight, isolated development environments with a single command.**
 
-`dockvirt` to narzędzie CLI, które automatyzuje proces tworzenia maszyn wirtualnych (VM) z wykorzystaniem libvirt/KVM. Umożliwia błyskawiczne uruchamianie aplikacji w kontenerach Docker, z prekonfigurowanym reverse proxy (Caddy), w pełni izolowanym od Twojego systemu operacyjnego.
+`dockvirt` is a CLI tool that automates the process of creating virtual machines (VMs) using libvirt/KVM. It allows you to instantly run applications in Docker containers, with a pre-configured Caddy reverse proxy, fully isolated from your host operating system.
 
 ---
 
-## 🤔 Dlaczego dockvirt?
+## 🤔 Why dockvirt?
 
-Pomysł na `dockvirt` narodził się z codziennych problemów deweloperów pracujących na stacjach roboczych. Główne wyzwania, które rozwiązuje:
+The idea for `dockvirt` was born from the daily problems of developers working on their workstations. The main challenges it solves are:
 
-### 🚫 Problem: Konflikty portów na workstation
+### 🚫 Problem: Port Conflicts on Your Workstation
 ```bash
-# Typowa sytuacja dewelopera
-docker run -p 3000:3000 frontend-app    # Port 3000 zajęty
-docker run -p 8080:8080 backend-app     # Port 8080 zajęty  
-docker run -p 5432:5432 postgres        # Port 5432 zajęty
-# Lokalne usługi na systemie też używają portów!
+# A typical developer situation
+docker run -p 3000:3000 frontend-app    # Port 3000 is busy
+docker run -p 8080:8080 backend-app     # Port 8080 is busy  
+docker run -p 5432:5432 postgres        # Port 5432 is busy
+# Local services on your system also use ports!
 ```
 
-### ✅ Rozwiązanie: Pełna izolacja w VM
+### ✅ Solution: Full Isolation in a VM
 ```bash
-# Z dockvirt każda aplikacja ma własną VM
+# With dockvirt, each application gets its own VM
 dockvirt up --name frontend --domain frontend.local --image frontend-app:latest --port 3000
 dockvirt up --name backend --domain backend.local --image backend-app:latest --port 8080  
 dockvirt up --name db --domain db.local --image postgres:latest --port 5432
-# Każda VM ma własną przestrzeń portów - zero konfliktów!
+# Each VM has its own port space - zero conflicts!
 ```
 
-### 🎯 Kluczowe zalety rozwiązania:
+### 🎯 Key Advantages of the Solution:
 
-*   **Eliminuje konflikty portów**: Każda aplikacja działa w oddzielnej VM z własną przestrzenią sieciową
-*   **Izoluje środowiska**: Różne wersje Node.js, Python, baz danych - bez konfliktów zależności
-*   **Chroni system hosta**: Eksperymenty w VM nie wpływają na stabilność workstation
-*   **Upraszcza networking**: Precyzyjne domeny zamiast zapamiętywania portów
-*   **Umożliwia łatwe przełączanie**: Szybkie `up`/`down` różnych projektów
-*   **Jest lekkie i szybkie**: Cloud-init + automatyczne obrazy = szybki start
-*   **Daje pełną kontrolę**: Oparcie na libvirt = zaawansowane możliwości konfiguracji
+*   **Eliminates Port Conflicts**: Each application runs in a separate VM with its own network space.
+*   **Isolates Environments**: Different versions of Node.js, Python, and databases without dependency conflicts.
+*   **Protects the Host System**: Experiments in a VM do not affect the stability of your workstation.
+*   **Simplifies Networking**: Precise domains instead of memorizing ports.
+*   **Allows Easy Switching**: Quickly bring different projects `up` or `down`.
+*   **It's Lightweight and Fast**: Cloud-init + automatic images = a quick start.
+*   **Gives You Full Control**: Based on libvirt for advanced configuration possibilities.
 
-## 🆚 Porównanie z innymi narzędziami
+## 🆚 Comparison with Other Tools
 
-| Narzędzie         | Główne zalety                                       | Główne wady                                             |
+| Tool              | Key Advantages                                      | Key Disadvantages                                       |
 | ----------------- | --------------------------------------------------- | ------------------------------------------------------- |
-| **dockvirt**      | Pełna izolacja (VM), prostota, automatyzacja        | Wymaga KVM (tylko Linux)                                |
-| **Docker Compose**| Szybkość, prostota, duża popularność                | Brak pełnej izolacji od systemu hosta                   |
-| **Vagrant**       | Wsparcie dla wielu providerów, elastyczność         | Wolniejszy start, bardziej złożona konfiguracja         |
-| **Multipass**     | Bardzo prosty w użyciu, dobra integracja z Ubuntu   | Ograniczona kontrola, silne powiązanie z Canonical      |
+| **dockvirt**      | Full isolation (VM), simplicity, automation         | Requires KVM (Linux only)                               |
+| **Docker Compose**| Speed, simplicity, high popularity                  | No full isolation from the host system                  |
+| **Vagrant**       | Support for multiple providers, flexibility         | Slower start, more complex configuration              |
+| **Multipass**     | Very simple to use, good integration with Ubuntu    | Limited control, strong ties to Canonical             |
 
-## 🚀 Główne funkcje
+## 🚀 Key Features
 
-*   **Automatyzacja od A do Z**: Tworzenie, konfigurowanie i usuwanie VM za pomocą prostych poleceń.
-*   **Uniwersalność**: Działa na popularnych dystrybucjach Linuksa (Ubuntu, Fedora i inne).
-*   **Elastyczność**: Pełna kontrola nad konfiguracją VM (RAM, CPU, dysk).
-*   **Prekonfigurowane środowisko**: Automatyczna instalacja Dockera i Caddy wewnątrz VM.
-*   **Izolacja**: Każde środowisko działa w oddzielnej maszynie wirtualnej.
+*   **End-to-End Automation**: Create, configure, and destroy VMs with simple commands.
+*   **Universal**: Works on popular Linux distributions (Ubuntu, Fedora, and more).
+*   **Flexibility**: Full control over VM configuration (RAM, CPU, disk).
+*   **Pre-configured Environment**: Automatic installation of Docker and Caddy inside the VM.
+*   **Isolation**: Each environment runs in a separate virtual machine.
 
-## 🔧 Wymagania
+## 🔧 Requirements
 
-*   System operacyjny Linux z obsługą KVM.
-*   Zainstalowane pakiety: `qemu-kvm`, `libvirt-daemon-system`, `virt-manager`, `cloud-image-utils`.
-*   Obraz chmurowy (`.qcow2`) dla wybranej dystrybucji (np. Ubuntu 22.04, Fedora Cloud Base).
+*   A Linux operating system with KVM support.
+*   Installed packages: `qemu-kvm`, `libvirt-daemon-system`, `virt-manager`, `cloud-image-utils`.
+*   A cloud image (`.qcow2`) for your chosen distribution (e.g., Ubuntu 22.04, Fedora Cloud Base).
 
-## 📦 Instalacja
+## 📦 Installation
 
-### 🐧 Linux (natywnie)
+### 🐧 Linux (Native)
 
-1.  **Zainstaluj z PyPI** (rekomendowane):
+1.  **Install from PyPI** (recommended):
     ```bash
     pip install dockvirt
     ```
 
-2.  **Lub zainstaluj z repozytorium** (dla deweloperów):
+2.  **Or install from the repository** (for developers):
     ```bash
     git clone https://github.com/dynapsys/dockvirt.git
     cd dockvirt
@@ -82,94 +82,94 @@ dockvirt up --name db --domain db.local --image postgres:latest --port 5432
 
 ### 🪟 Windows (WSL2)
 
-`dockvirt` doskonale działa na WSL2, rozwiązując problemy z konfliktami portów między Windows a aplikacjami deweloperskimi:
+`dockvirt` works perfectly on WSL2, solving port conflict issues between Windows and your development applications:
 
-1.  **Zainstaluj WSL2 z Ubuntu**:
+1.  **Install WSL2 with Ubuntu**:
     ```powershell
-    # W PowerShell jako Administrator
+    # In PowerShell as Administrator
     wsl --install -d Ubuntu-22.04
     ```
 
-2.  **W WSL2, zainstaluj zależności**:
+2.  **In WSL2, install the dependencies**:
     ```bash
-    # Aktualizuj system
+    # Update the system
     sudo apt update && sudo apt upgrade -y
     
-    # Zainstaluj KVM/QEMU i libvirt
+    # Install KVM/QEMU and libvirt
     sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
-    sudo apt install -y cloud-image-utils  # dla cloud-localds
+    sudo apt install -y cloud-image-utils  # for cloud-localds
     
-    # Dodaj użytkownika do grup
+    # Add your user to the required groups
     sudo usermod -a -G libvirt,kvm $USER
     newgrp libvirt
     
-    # Zainstaluj dockvirt
+    # Install dockvirt
     pip install dockvirt
     ```
 
-3.  **Uruchom libvirt**:
+3.  **Start libvirt**:
     ```bash
     sudo systemctl enable --now libvirtd
     sudo systemctl start libvirtd
     ```
 
-### 🐳 Wymagania systemowe
+### 🐳 System Requirements
 
 **Linux/WSL2:**
 - KVM/QEMU (virtualization support)
 - libvirt-daemon-system
 - cloud-image-utils (`cloud-localds`)
-- Docker (dla budowania obrazów aplikacji)
+- Docker (for building application images)
 
-**Sprawdzenie wsparcia wirtualizacji:**
+**Checking for virtualization support:**
 ```bash
-# Sprawdź czy KVM jest dostępne
+# Check if KVM is available
 lsmod | grep kvm
-egrep -c '(vmx|svm)' /proc/cpuinfo  # Powinno być > 0
+egrep -c '(vmx|svm)' /proc/cpuinfo  # Should be > 0
 ```
 
-## 🏗️ Jak to działa?
+## 🏗️ How It Works
 
-### Przepływ procesu tworzenia VM
+### VM Creation Process Flow
 
 ```mermaid
 graph TD
-    A[dockvirt up] --> B{Czy istnieje config.yaml?}
-    B -->|Nie| C[Utwórz domyślny config.yaml]
-    B -->|Tak| D[Wczytaj konfigurację]
+    A[dockvirt up] --> B{config.yaml exists?}
+    B -->|No| C[Create default config.yaml]
+    B -->|Yes| D[Load configuration]
     C --> D
-    D --> E{Czy obraz OS istnieje lokalnie?}
-    E -->|Nie| F[Pobierz obraz z URL]
-    E -->|Tak| G[Użyj lokalnego obrazu]
+    D --> E{OS image exists locally?}
+    E -->|No| F[Download image from URL]
+    E -->|Yes| G[Use local image]
     F --> G
-    G --> H[Renderuj szablony cloud-init]
-    H --> I[Utwórz ISO cloud-init]
-    I --> J[Utwórz dysk VM z backing file]
-    J --> K[Uruchom virt-install]
-    K --> L[VM gotowa z Docker + Caddy]
+    G --> H[Render cloud-init templates]
+    H --> I[Create cloud-init ISO]
+    I --> J[Create VM disk with backing file]
+    J --> K[Run virt-install]
+    K --> L[VM ready with Docker + Caddy]
 ```
 
-### Architektura systemu
+### System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                          HOST SYSTEM                           │
 ├─────────────────────────────────────────────────────────────────┤
 │  dockvirt CLI                                                   │
-│  ├── config.py         (zarządzanie konfiguracją)              │
-│  ├── image_manager.py  (pobieranie obrazów OS)                 │
-│  ├── vm_manager.py     (tworzenie/usuwanie VM)                 │
-│  └── cli.py           (interfejs użytkownika)                  │
+│  ├── config.py         (configuration management)              │
+│  ├── image_manager.py  (OS image downloading)                │
+│  ├── vm_manager.py     (VM creation/destruction)               │
+│  └── cli.py           (user interface)                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  ~/.dockvirt/                                                   │
-│  ├── config.yaml      (konfiguracja domyślna)                  │
-│  ├── images/          (cache obrazów OS)                       │
-│  └── vm_name/         (pliki cloud-init dla każdej VM)         │
+│  ├── config.yaml      (default configuration)                  │
+│  ├── images/          (OS image cache)                         │
+│  └── vm_name/         (cloud-init files for each VM)           │
 ├─────────────────────────────────────────────────────────────────┤
 │  libvirt/KVM                                                    │
-│  ├── virt-install     (tworzenie VM)                           │
-│  ├── virsh            (zarządzanie VM)                         │
-│  └── qemu-kvm         (wirtualizacja)                          │
+│  ├── virt-install     (VM creation)                            │
+│  ├── virsh            (VM management)                          │
+│  └── qemu-kvm         (virtualization)                         │
 └─────────────────────────────────────────────────────────────────┘
                                │
                                ▼
@@ -177,16 +177,16 @@ graph TD
 │                        VIRTUAL MACHINE                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  Ubuntu/Fedora OS + cloud-init                                 │
-│  ├── Docker Engine    (automatycznie zainstalowany)           │
-│  └── docker-compose   (uruchamia kontenery)                   │
-│      ├── Caddy        (reverse proxy na porcie 80/443)        │
-│      └── App Container (Twoja aplikacja)                      │
+│  ├── Docker Engine    (automatically installed)                │
+│  └── docker-compose   (runs containers)                        │
+│      ├── Caddy        (reverse proxy on port 80/443)          │
+│      └── App Container (Your application)                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## ⚙️ Konfiguracja
+## ⚙️ Configuration
 
-`dockvirt` automatycznie tworzy plik konfiguracyjny `~/.dockvirt/config.yaml` przy pierwszym uruchomieniu:
+`dockvirt` automatically creates a configuration file at `~/.dockvirt/config.yaml` on its first run:
 
 ```yaml
 default_os: ubuntu22.04
@@ -199,29 +199,29 @@ images:
     variant: fedora-cloud-base-38
 ```
 
-## 🖥️ Użycie
+## 🖥️ Usage
 
-### 🚀 Nowy workflow - Docker build w VM
+### 🚀 New Workflow - Docker Build Inside the VM
 
-**Od teraz Docker images budują się automatycznie wewnątrz VM!** Nie musisz już budować obrazów na hoście.
+**From now on, Docker images are built automatically inside the VM!** You no longer need to build images on the host.
 
 ```bash
-# Stary sposób (już niepotrzebny):
+# Old way (no longer necessary):
 # docker build -t my-app:latest .
 # dockvirt up --image my-app:latest
 
-# Nowy sposób - po prostu uruchom:
-cd my-project/  # katalog z Dockerfile
+# New way - just run:
+cd my-project/  # directory with a Dockerfile
 dockvirt up --name my-app --domain my-app.local --image my-app:latest --port 80
-# Dockerfile i pliki automatycznie kopiowane do VM i budowane tam!
+# The Dockerfile and your app files are automatically copied to the VM and built there!
 ```
 
-### 🚀 Szybkie uruchomienie z plikiem .dockvirt
+### 🚀 Quick Start with a .dockvirt File
 
-Najprostszy sposób to utworzenie pliku `.dockvirt` w katalogu projektu (jak `.env`):
+The easiest way is to create a `.dockvirt` file in your project directory (like an `.env` file):
 
 ```bash
-# Utwórz plik .dockvirt
+# Create the .dockvirt file
 cat > .dockvirt << EOF
 name=my-app
 domain=my-app.local
@@ -230,21 +230,21 @@ port=80
 os=ubuntu22.04
 EOF
 
-# Teraz wystarczy (w katalogu z Dockerfile):
+# Now, just run (in the directory with the Dockerfile):
 dockvirt up
 ```
 
-### 🔧 Lub używaj parametrów CLI
+### 🔧 Or Use CLI Parameters
 
 ```bash
-# Użyj domyślnego OS (ubuntu22.04)
+# Use the default OS (ubuntu22.04)
 dockvirt up \
   --name my-app \
   --domain my-app.local \
   --image nginx:latest \
   --port 80
 
-# Lub wybierz konkretny OS
+# Or choose a specific OS
 dockvirt up \
   --name fedora-app \
   --domain fedora-app.local \
@@ -253,45 +253,45 @@ dockvirt up \
   --os fedora38
 ```
 
-### 🌐 Dostęp do aplikacji
+### 🌐 Accessing Your Application
 
-Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/hosts`:
+After creating the VM, `dockvirt` will display its IP address. Add it to your `/etc/hosts` file:
 
 ```
-<adres_ip> my-app.local
+<ip_address> my-app.local
 ```
 
-Plik `.dockvirt` ma priorytet nad parametrami domyślnymi, ale parametry CLI zastępują wszystko.
+The `.dockvirt` file has priority over the default parameters, but CLI parameters override everything.
 
-## 🔥 Ekstremalne przykłady użycia
+## 🔥 Advanced Usage Examples
 
 ### 🚀 Example 1: Multi-Tenant SaaS Platform
 
-**Scenario:** Każdy klient SaaS ma całkowicie izolowaną instancję aplikacji w osobnej VM.
+**Scenario:** Each SaaS customer gets a completely isolated application instance in a separate VM.
 
 ```bash
-# Klient A
+# Customer A
 dockvirt up --name client-a --domain client-a.myaas.com --image myapp:v2.1 --os ubuntu22.04
 
-# Klient B  
+# Customer B  
 dockvirt up --name client-b --domain client-b.myaas.com --image myapp:v1.9 --os fedora38
 
-# Klient C (beta tester)
+# Customer C (beta tester)
 dockvirt up --name client-c --domain beta.myaas.com --image myapp:v3.0-beta --os ubuntu22.04
 ```
 
-**Rezultat:** 
-- ✅ Zero konfliktów między klientami
-- ✅ Różne wersje aplikacji dla różnych klientów  
-- ✅ Pełna izolacja danych i zasobów
-- ✅ Automatyczne SSL/TLS dla każdej domeny
+**Result:** 
+- ✅ Zero conflicts between customers
+- ✅ Different application versions for different customers  
+- ✅ Full data and resource isolation
+- ✅ Automatic SSL/TLS for each domain
 
 ### 🌐 Example 2: Development Environment as Code
 
-**Scenario:** Cały zespół deweloperski otrzymuje identyczne środowiska jedną komendą.
+**Scenario:** The entire development team gets identical environments with a single command.
 
 ```yaml
-# .dockvirt-stack (wieloappka)
+# .dockvirt-stack (multi-app)
 stack:
   frontend:
     image: myapp-frontend:latest
@@ -308,81 +308,81 @@ stack:
 ```
 
 ```bash
-# Jeden developer
+# Developer One
 dockvirt stack deploy dev-john
 
-# Drugi developer
+# Developer Two
 dockvirt stack deploy dev-jane
 
 # QA environment
 dockvirt stack deploy qa-env
 ```
 
-## 📚 Szczegółowe przykłady
+## 📚 Detailed Examples
 
-Przygotowaliśmy kilka praktycznych przykładów, które pokażą Ci możliwości nowego, uproszczonego API:
+We have prepared several practical examples to show you the possibilities of the new, simplified API:
 
-*   **[Przykład 1: Statyczna strona na Nginx](./examples/1-static-nginx-website)** - Podstawowe użycie z automatycznym pobieraniem obrazów
-*   **[Przykład 2: Aplikacja webowa w Pythonie (Flask)](./examples/2-python-flask-app)** - Aplikacja z porównaniem Ubuntu vs Fedora
-*   **[Przykład 3: Porównanie systemów operacyjnych](./examples/3-multi-os-comparison)** - Konfiguracja własnych obrazów i testowanie wydajności
+*   **[Example 1: Static Nginx Website](./examples/1-static-nginx-website)** - Basic usage with automatic image downloading
+*   **[Example 2: Python Flask Web App](./examples/2-python-flask-app)** - An application with an Ubuntu vs. Fedora comparison
+*   **[Example 3: Operating System Comparison](./examples/3-multi-os-comparison)** - Configuring custom images and performance testing
 
-Każdy przykład teraz korzysta z nowego, uproszczonego API - nie musisz już podawać ścieżek do obrazów ani wariantów OS!
+Each example now uses the new, simplified API - you no longer need to provide image paths or OS variants!
 
 ## 🚨 Troubleshooting
 
 ### ❌ "cloud-localds: command not found"
 ```bash
-# Zainstaluj brakujący pakiet
+# Install the missing package
 sudo apt install cloud-image-utils
 
-# Lub na systemach RPM
+# Or on RPM-based systems
 sudo dnf install cloud-utils
 ```
 
-### ❌ "Permission denied" przy dostępie do libvirt
+### ❌ "Permission denied" when accessing libvirt
 ```bash
-# Dodaj użytkownika do grupy libvirt
+# Add your user to the libvirt group
 sudo usermod -a -G libvirt $USER
 newgrp libvirt
 
-# Uruchom ponownie usługę
+# Restart the service
 sudo systemctl restart libvirtd
 ```
 
-### ❌ KVM nie jest dostępny
+### ❌ KVM not available
 ```bash
-# Sprawdź czy wirtualizacja jest włączona w BIOS
+# Check if virtualization is enabled in your BIOS
 egrep -c '(vmx|svm)' /proc/cpuinfo
 
-# Na WSL2, upewnij się że Hyper-V jest włączony
-# W PowerShell jako Administrator:
+# On WSL2, make sure Hyper-V is enabled
+# In PowerShell as Administrator:
 # Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All
 ```
 
-### ❌ Port conflicts na Windows + WSL2
+### ❌ Port conflicts on Windows + WSL2
 ```bash
-# Sprawdź jakie porty używa Windows
+# Check which ports Windows is using
 netstat -an | findstr LISTENING
 
-# W WSL2 wszystkie VM mają izolowane porty
+# In WSL2, all VMs have isolated ports
 dockvirt up --name app1 --domain app1.local --image nginx --port 80
 dockvirt up --name app2 --domain app2.local --image apache --port 80
-# Oba działają bez konfliktów!
+# Both run without conflicts!
 ```
 
-## 💾 Generowanie obrazów i paczek
+## 💾 Generating Images and Packages
 
-### 📦 Paczki dystrybucyjne (.deb/.rpm)
+### 📦 Distribution Packages (.deb/.rpm)
 
 ```bash
-# Generuj paczkę .deb z automatyczną instalacją Docker
+# Generate a .deb package with automatic Docker installation
 dockvirt generate-image \
   --type deb-package \
   --output my-app.deb \
   --apps "nginx:latest,postgres:13" \
   --domains "app.local,db.local"
 
-# Generuj paczkę .rpm 
+# Generate an .rpm package 
 dockvirt generate-image \
   --type rpm-package \
   --output my-app.rpm \
@@ -393,7 +393,7 @@ dockvirt generate-image \
 ### 🥧 Raspberry Pi SD Card Image
 
 ```bash
-# Generuj obraz SD karty z preinstalowanym dockvirt
+# Generate an SD card image with dockvirt pre-installed
 dockvirt generate-image \
   --type raspberry-pi \
   --size 8GB \
@@ -401,14 +401,14 @@ dockvirt generate-image \
   --apps "nginx:latest,postgres:13" \
   --domains "app.pi.local,db.pi.local"
 
-# Flash na SD kartę
+# Flash to an SD card
 dd if=rpi-dockvirt.img of=/dev/sdX bs=4M status=progress
 ```
 
 ### 💻 PC Bootable ISO
 
 ```bash
-# Generuj bootable ISO dla PC/serwera
+# Generate a bootable ISO for a PC/server
 dockvirt generate-image \
   --type pc-iso \
   --size 16GB \
@@ -416,7 +416,7 @@ dockvirt generate-image \
   --config production-stack.yaml
 ```
 
-**Przykład production-stack.yaml:**
+**Example production-stack.yaml:**
 ```yaml
 apps:
   frontend:
@@ -440,11 +440,11 @@ config:
 ### 🚢 Podman Support
 
 ```bash
-# Użyj Podman zamiast Docker
+# Use Podman instead of Docker
 export DOCKVIRT_RUNTIME=podman
 dockvirt up --name my-app --image nginx:latest
 
-# Lub w pliku .dockvirt
+# Or in the .dockvirt file
 runtime=podman
 name=my-app
 image=nginx:latest
@@ -452,12 +452,12 @@ image=nginx:latest
 
 ## 🛠️ Development
 
-Repozytorium zawiera `Makefile`, który ułatwia proces deweloperski. Zobacz plik [CONTRIBUTING.md](./CONTRIBUTING.md), aby dowiedzieć się, jak wnieść wkład w rozwój projektu.
+The repository contains a `Makefile` to facilitate the development process. See the [CONTRIBUTING.md](./CONTRIBUTING.md) file to learn how to contribute to the project's development.
 
-## ✍️ Autor
+## ✍️ Author
 
-**Tom Sapletta** - Doświadczony programista i entuzjasta otwartego oprogramowania. Pasjonat automatyzacji i tworzenia narzędzi ułatwiających pracę deweloperom.
+**Tom Sapletta** - An experienced programmer and open-source enthusiast. Passionate about automation and creating tools that make developers' lives easier.
 
-## 📜 Licencja
+## 📜 License
 
-Projekt jest udostępniany na licencji **Apache 2.0**. Szczegóły znajdują się w pliku [LICENSE](LICENSE).
+This project is licensed under the **Apache 2.0 License**. See the [LICENSE](LICENSE) file for details.
