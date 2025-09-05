@@ -12,7 +12,7 @@ def run(cmd):
     return result.stdout.strip()
 
 
-def create_vm(name, domain, image, port, mem, disk, cpus):
+def create_vm(name, domain, image, port, mem, disk, cpus, os_variant, base_image):
     BASE_DIR.mkdir(parents=True, exist_ok=True)
     vm_dir = BASE_DIR / name
     vm_dir.mkdir(exist_ok=True)
@@ -25,7 +25,9 @@ def create_vm(name, domain, image, port, mem, disk, cpus):
     )
 
     # Render docker-compose.yml
-    docker_compose_template = (templates_dir / "docker-compose.yml.j2").read_text()
+    docker_compose_template_path = templates_dir / "docker-compose.yml.j2"
+    docker_compose_template = docker_compose_template_path.read_text()
+
     docker_compose_content = Template(docker_compose_template).render(
         app_name=name, app_image=image
     )
@@ -34,27 +36,28 @@ def create_vm(name, domain, image, port, mem, disk, cpus):
     cloudinit_template = (templates_dir / "cloud-init.yaml.j2").read_text()
     cloudinit_rendered = Template(cloudinit_template).render(
         docker_compose_content=docker_compose_content,
-        caddyfile_content=caddyfile_content
+        caddyfile_content=caddyfile_content,
+        os_family="fedora" if "fedora" in os_variant else "debian",
+        remote_user="fedora" if "fedora" in os_variant else "ubuntu"
     )
     (vm_dir / "user-data").write_text(cloudinit_rendered)
     metadata_content = f"instance-id: {name}\nlocal-hostname: {name}\n"
     (vm_dir / "meta-data").write_text(metadata_content)
 
-    # Stwórz ISO z cloud-init
+    # Create cloud-init ISO
     cidata = vm_dir / "cidata.iso"
     run(f"cloud-localds {cidata} {vm_dir}/user-data {vm_dir}/meta-data")
 
-    # Tworzymy VM (Ubuntu cloud image)
-    # Ubuntu cloud image must be in this path
-    ubuntu_img = "/var/lib/libvirt/images/ubuntu-22.04-server-cloudimg-amd64.img"
+    # Create VM disk from base image
     disk_img = vm_dir / f"{name}.qcow2"
-    run(f"qemu-img create -f qcow2 -b {ubuntu_img} {disk_img} {disk}G")
+    run(f"qemu-img create -f qcow2 -b {base_image} {disk_img} {disk}G")
 
+    # Create VM using virt-install
     run(
         f"virt-install --name {name} --ram {mem} --vcpus {cpus} "
         f"--disk path={disk_img},format=qcow2 "
         f"--disk path={cidata},device=cdrom "
-        f"--os-type linux --os-variant ubuntu22.04 "
+        f"--os-type linux --os-variant {os_variant} "
         f"--import --network network=default --noautoconsole --graphics none"
     )
 

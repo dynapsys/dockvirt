@@ -1,18 +1,29 @@
 #cloud-config
-package_update: true
-packages:
-  - docker.io
-  - python3-pip
+# Ensure user exists and is in the docker group
+users:
+  - name: '{{ remote_user }}'
+    groups: docker
+    sudo: ALL=(ALL) NOPASSWD:ALL
 
+# Update packages and install prerequisites
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+
+# Write Docker Compose and Caddy files
 write_files:
-  - path: /home/ubuntu/docker-compose.yml
+  - path: /home/{{ remote_user }}/docker-compose.yml
     content: |
 {{ docker_compose_content | indent(6) }}
-  - path: /home/ubuntu/Caddyfile
+  - path: /home/{{ remote_user }}/Caddyfile
     content: |
 {{ caddyfile_content | indent(6) }}
 
+# Install Docker, set permissions, and run containers
 runcmd:
-  - chown ubuntu:ubuntu /home/ubuntu/docker-compose.yml
-  - chown ubuntu:ubuntu /home/ubuntu/Caddyfile
-  - cd /home/ubuntu && docker compose up -d
+  - curl -fsSL https://get.docker.com -o get-docker.sh
+  - sh get-docker.sh
+  - chown {{ remote_user }}:{{ remote_user }} /home/{{ remote_user }}/docker-compose.yml
+  - chown {{ remote_user }}:{{ remote_user }} /home/{{ remote_user }}/Caddyfile
+  - runuser -l {{ remote_user }} -c 'cd /home/{{ remote_user }} && docker compose up -d'
