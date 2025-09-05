@@ -36,32 +36,25 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
     config = load_config()
     project_config = load_project_config()
     # Use values from the local .dockvirt file as defaults
-    if not name and "name" in project_config:
-        name = project_config["name"]
-    if not domain and "domain" in project_config:
-        domain = project_config["domain"]
-    if not image and "image" in project_config:
-        image = project_config["image"]
-    # Fallback to project .dockvirt value when --port is not provided
-    if port is None and "port" in project_config:
-        port = int(project_config["port"])
-    if not os_name and "os" in project_config:
-        os_name = project_config["os"]
-    if not os_name:
-        os_name = config["default_os"]
+    name = name or project_config.get("name")
+    domain = domain or project_config.get("domain")
+    image = image or project_config.get("image")
+    if port is None:
+        port = int(project_config.get("port", 80))
+    os_name = os_name or project_config.get("os") or config["default_os"]
 
-    # Check if required parameters are available
+    # Check if required parameters are available after applying defaults
     if not name:
         click.echo("❌ Error: Missing VM name. "
-                   "Provide --name or create a .dockvirt file")
+                   "Provide --name or create a .dockvirt file with name=...")
         return
     if not domain:
         click.echo("❌ Error: Missing domain. "
-                   "Provide --domain or create a .dockvirt file")
+                   "Provide --domain or create a .dockvirt file with domain=...")
         return
     if not image:
         click.echo("❌ Error: Missing Docker image. "
-                   "Provide --image or create a .dockvirt file")
+                   "Provide --image or create a .dockvirt file with image=...")
         return
 
     create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
