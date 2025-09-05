@@ -11,11 +11,35 @@
 
 ## 🤔 Dlaczego dockvirt?
 
-Pomysł na `dockvirt` narodził się z potrzeby stworzenia prostego, ale potężnego narzędzia do zarządzania środowiskami deweloperskimi, które łączyłoby zalety konteneryzacji (Docker) i wirtualizacji (KVM). Celem było stworzenie rozwiązania, które:
+Pomysł na `dockvirt` narodził się z codziennych problemów deweloperów pracujących na stacjach roboczych. Główne wyzwania, które rozwiązuje:
 
-*   **Zapewnia pełną izolację**: W przeciwieństwie do samego Dockera, `dockvirt` uruchamia kontenery wewnątrz w pełni odizolowanej maszyny wirtualnej, co eliminuje problemy z konfliktami zależności, portów czy konfiguracji sieciowej na maszynie hosta.
-*   **Jest lekkie i szybkie**: Dzięki wykorzystaniu `cloud-init` i obrazów chmurowych, proces tworzenia i konfiguracji VM jest zautomatyzowany i trwa zaledwie chwilę.
-*   **Daje pełną kontrolę**: W odróżnieniu od narzędzi takich jak Multipass, `dockvirt` opiera się na standardowym ekosystemie libvirt, dając zaawansowanym użytkownikom pełną kontrolę nad każdym aspektem maszyny wirtualnej.
+### 🚫 Problem: Konflikty portów na workstation
+```bash
+# Typowa sytuacja dewelopera
+docker run -p 3000:3000 frontend-app    # Port 3000 zajęty
+docker run -p 8080:8080 backend-app     # Port 8080 zajęty  
+docker run -p 5432:5432 postgres        # Port 5432 zajęty
+# Lokalne usługi na systemie też używają portów!
+```
+
+### ✅ Rozwiązanie: Pełna izolacja w VM
+```bash
+# Z dockvirt każda aplikacja ma własną VM
+dockvirt up --name frontend --domain frontend.local --image frontend-app:latest --port 3000
+dockvirt up --name backend --domain backend.local --image backend-app:latest --port 8080  
+dockvirt up --name db --domain db.local --image postgres:latest --port 5432
+# Każda VM ma własną przestrzeń portów - zero konfliktów!
+```
+
+### 🎯 Kluczowe zalety rozwiązania:
+
+*   **Eliminuje konflikty portów**: Każda aplikacja działa w oddzielnej VM z własną przestrzenią sieciową
+*   **Izoluje środowiska**: Różne wersje Node.js, Python, baz danych - bez konfliktów zależności
+*   **Chroni system hosta**: Eksperymenty w VM nie wpływają na stabilność workstation
+*   **Upraszcza networking**: Precyzyjne domeny zamiast zapamiętywania portów
+*   **Umożliwia łatwe przełączanie**: Szybkie `up`/`down` różnych projektów
+*   **Jest lekkie i szybkie**: Cloud-init + automatyczne obrazy = szybki start
+*   **Daje pełną kontrolę**: Oparcie na libvirt = zaawansowane możliwości konfiguracji
 
 ## 🆚 Porównanie z innymi narzędziami
 
@@ -40,9 +64,11 @@ Pomysł na `dockvirt` narodził się z potrzeby stworzenia prostego, ale potęż
 *   Zainstalowane pakiety: `qemu-kvm`, `libvirt-daemon-system`, `virt-manager`, `cloud-image-utils`.
 *   Obraz chmurowy (`.qcow2`) dla wybranej dystrybucji (np. Ubuntu 22.04, Fedora Cloud Base).
 
-## ⚙️ Instalacja
+## 📦 Instalacja
 
-1.  **Zainstaluj z PyPI**:
+### 🐧 Linux (natywnie)
+
+1.  **Zainstaluj z PyPI** (rekomendowane):
     ```bash
     pip install dockvirt
     ```
@@ -53,6 +79,54 @@ Pomysł na `dockvirt` narodził się z potrzeby stworzenia prostego, ale potęż
     cd dockvirt
     make install
     ```
+
+### 🪟 Windows (WSL2)
+
+`dockvirt` doskonale działa na WSL2, rozwiązując problemy z konfliktami portów między Windows a aplikacjami deweloperskimi:
+
+1.  **Zainstaluj WSL2 z Ubuntu**:
+    ```powershell
+    # W PowerShell jako Administrator
+    wsl --install -d Ubuntu-22.04
+    ```
+
+2.  **W WSL2, zainstaluj zależności**:
+    ```bash
+    # Aktualizuj system
+    sudo apt update && sudo apt upgrade -y
+    
+    # Zainstaluj KVM/QEMU i libvirt
+    sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+    sudo apt install -y cloud-image-utils  # dla cloud-localds
+    
+    # Dodaj użytkownika do grup
+    sudo usermod -a -G libvirt,kvm $USER
+    newgrp libvirt
+    
+    # Zainstaluj dockvirt
+    pip install dockvirt
+    ```
+
+3.  **Uruchom libvirt**:
+    ```bash
+    sudo systemctl enable --now libvirtd
+    sudo systemctl start libvirtd
+    ```
+
+### 🐳 Wymagania systemowe
+
+**Linux/WSL2:**
+- KVM/QEMU (virtualization support)
+- libvirt-daemon-system
+- cloud-image-utils (`cloud-localds`)
+- Docker (dla budowania obrazów aplikacji)
+
+**Sprawdzenie wsparcia wirtualizacji:**
+```bash
+# Sprawdź czy KVM jest dostępne
+lsmod | grep kvm
+egrep -c '(vmx|svm)' /proc/cpuinfo  # Powinno być > 0
+```
 
 ## 🏗️ Jak to działa?
 
@@ -127,7 +201,25 @@ images:
 
 ## 🖥️ Użycie
 
-Teraz używanie `dockvirt` jest znacznie prostsze - nie musisz już podawać ścieżek do obrazów:
+### 🚀 Szybkie uruchomienie z plikiem .dockvirt
+
+Najprostszy sposób to utworzenie pliku `.dockvirt` w katalogu projektu (jak `.env`):
+
+```bash
+# Utwórz plik .dockvirt
+cat > .dockvirt << EOF
+name=my-app
+domain=my-app.local
+image=nginx:latest
+port=80
+os=ubuntu22.04
+EOF
+
+# Teraz wystarczy:
+dockvirt up
+```
+
+### 🔧 Lub używaj parametrów CLI
 
 ```bash
 # Użyj domyślnego OS (ubuntu22.04)
@@ -146,11 +238,15 @@ dockvirt up \
   --os fedora36
 ```
 
+### 🌐 Dostęp do aplikacji
+
 Po utworzeniu VM, `dockvirt` wyświetli jej adres IP. Dodaj go do pliku `/etc/hosts`:
 
 ```
 <adres_ip> my-app.local
 ```
+
+Plik `.dockvirt` ma priorytet nad parametrami domyślnymi, ale parametry CLI zastępują wszystko.
 
 ## 📚 Przykłady użycia
 
@@ -161,6 +257,48 @@ Przygotowaliśmy kilka praktycznych przykładów, które pokażą Ci możliwośc
 *   **[Przykład 3: Porównanie systemów operacyjnych](./examples/3-multi-os-comparison)** - Konfiguracja własnych obrazów i testowanie wydajności
 
 Każdy przykład teraz korzysta z nowego, uproszczonego API - nie musisz już podawać ścieżek do obrazów ani wariantów OS!
+
+## 🚨 Troubleshooting
+
+### ❌ "cloud-localds: command not found"
+```bash
+# Zainstaluj brakujący pakiet
+sudo apt install cloud-image-utils
+
+# Lub na systemach RPM
+sudo dnf install cloud-utils
+```
+
+### ❌ "Permission denied" przy dostępie do libvirt
+```bash
+# Dodaj użytkownika do grupy libvirt
+sudo usermod -a -G libvirt $USER
+newgrp libvirt
+
+# Uruchom ponownie usługę
+sudo systemctl restart libvirtd
+```
+
+### ❌ KVM nie jest dostępny
+```bash
+# Sprawdź czy wirtualizacja jest włączona w BIOS
+egrep -c '(vmx|svm)' /proc/cpuinfo
+
+# Na WSL2, upewnij się że Hyper-V jest włączony
+# W PowerShell jako Administrator:
+# Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All
+```
+
+### ❌ Port conflicts na Windows + WSL2
+```bash
+# Sprawdź jakie porty używa Windows
+netstat -an | findstr LISTENING
+
+# W WSL2 wszystkie VM mają izolowane porty
+dockvirt up --name app1 --domain app1.local --image nginx --port 80
+dockvirt up --name app2 --domain app2.local --image apache --port 80
+# Oba działają bez konfliktów!
+```
 
 ## 🛠️ Development
 

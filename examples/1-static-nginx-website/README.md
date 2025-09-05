@@ -12,8 +12,14 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
     ```
 
 2.  **Uruchom VM za pomocą `dockvirt`**:
-    Teraz używanie `dockvirt` jest znacznie prostsze! Nie musisz już podawać ścieżek do obrazów - wszystko zostanie pobrane automatycznie:
+    Najprościej używając pliku `.dockvirt` (już utworzony w tym katalogu):
 
+    ```bash
+    # Po prostu uruchom - wszystkie parametry są w pliku .dockvirt
+    dockvirt up
+    ```
+
+    Lub nadal możesz używać parametrów CLI:
     ```bash
     # Użyj domyślnego Ubuntu 22.04
     dockvirt up \
@@ -21,11 +27,8 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą stronę sta
       --domain static-site.local \
       --image my-static-website:latest \
       --port 80
-    ```
 
-    Lub wybierz inny system operacyjny:
-    ```bash
-    # Użyj Fedory
+    # Lub użyj Fedory
     dockvirt up \
       --name static-site-fedora \
       --domain static-site-fedora.local \

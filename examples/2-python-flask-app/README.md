@@ -12,26 +12,25 @@ Ten przykład pokazuje, jak za pomocą `dockvirt` uruchomić prostą aplikację 
     ```
 
 2.  **Uruchom VM za pomocą `dockvirt`**:
-    Dzięki nowemu systemowi konfiguracji, uruchomienie jest bardzo proste:
+    Wykorzystaj plik `.dockvirt` dla maksymalnej wygody:
 
     ```bash
-    # Domyślnie użyje Ubuntu 22.04
+    # Użyj domyślnej konfiguracji z pliku .dockvirt
+    dockvirt up
+    
+    # Lub zmień OS na Fedorę (edytuj .dockvirt lub użyj parametru)
+    dockvirt up --os fedora36
+    ```
+
+    Możesz też ignorować plik `.dockvirt` i używać pełnych parametrów:
+    ```bash
+    # Pełna komenda z parametrami
     dockvirt up \
       --name flask-app \
       --domain flask-app.local \
       --image my-flask-app:latest \
-      --port 5000
-    ```
-
-    Lub przetestuj na Fedorze:
-    ```bash
-    # Użyj Fedory 36
-    dockvirt up \
-      --name flask-app-fedora \
-      --domain flask-app-fedora.local \
-      --image my-flask-app:latest \
       --port 5000 \
-      --os fedora36
+      --os ubuntu22.04
     ```
 
 3.  **Dodaj wpis do `/etc/hosts`**:

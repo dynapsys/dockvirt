@@ -184,13 +184,22 @@ flowchart TD
 
 ## 🚀 Szybki start
 
+### Opcja 1: Użyj pliku .dockvirt (rekomendowane)
+
 ```bash
 # Przejdź do dowolnego przykładu
 cd examples/1-static-nginx-website
 
 # Zbuduj obraz Dockera
-docker build -t example-app:latest .
+docker build -t my-static-website:latest .
 
+# Po prostu uruchom - parametry są w pliku .dockvirt
+dockvirt up
+```
+
+### Opcja 2: Tradycyjne parametry CLI
+
+```bash
 # Uruchom z domyślnym Ubuntu 22.04
 dockvirt up \
   --name my-test \
@@ -199,12 +208,18 @@ dockvirt up \
   --port 80
 
 # Lub wybierz Fedorę
-dockvirt up \
-  --name my-test-fedora \
-  --domain my-test-fedora.local \
-  --image example-app:latest \
-  --port 80 \
-  --os fedora36
+dockvirt up --os fedora36
+```
+
+### 📝 Przykład pliku .dockvirt
+
+```bash
+# .dockvirt
+name=my-app
+domain=my-app.local  
+image=my-app:latest
+port=80
+os=ubuntu22.04
 ```
 
 ## 🔧 Wymagania

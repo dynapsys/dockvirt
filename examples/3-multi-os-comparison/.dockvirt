@@ -1,0 +1,12 @@
+# Konfiguracja dla porównania systemów operacyjnych
+# Ten plik działa jak .env - definiuje domyślne wartości dla dockvirt
+
+name=multi-os-test
+domain=multi-os.local
+image=nginx:latest
+port=80
+os=ubuntu22.04
+
+# Inne dostępne opcje:
+# os=fedora36
+# os=debian12  # jeśli dodałeś do ~/.dockvirt/config.yaml

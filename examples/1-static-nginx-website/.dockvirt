@@ -1,0 +1,8 @@
+# Domyślna konfiguracja dla statycznej strony na Nginx
+# Ten plik działa jak .env - definiuje domyślne wartości dla dockvirt
+
+name=static-site
+domain=static-site.local
+image=my-static-website:latest
+port=80
+os=ubuntu22.04

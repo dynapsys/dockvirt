@@ -1,0 +1,11 @@
+# Domyślna konfiguracja dla aplikacji Flask
+# Ten plik działa jak .env - definiuje domyślne wartości dla dockvirt
+
+name=flask-app
+domain=flask-app.local
+image=my-flask-app:latest
+port=5000
+os=ubuntu22.04
+
+# Możesz zmienić OS na fedora36 dla testów:
+# os=fedora36
