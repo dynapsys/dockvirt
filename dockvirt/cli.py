@@ -20,13 +20,13 @@ def main():
 
 
 @main.command()
-@click.option("--name", required=False, help="Name of the VM (e.g., project1)")
+@click.option("--name", default=None, help="Name of the VM (e.g., project1)")
 @click.option(
-    "--domain", required=False, help="Application domain (e.g., app.local)"
+    "--domain", default=None, help="Application domain (e.g., app.local)"
 )
-@click.option('--image', required=False, help='Docker image name to run in the VM')
-@click.option('--port', type=int, required=False, help='Port to expose from the VM')
-@click.option('--os', 'os_name', required=False, help='OS variant (e.g., ubuntu22.04, fedora38)')
+@click.option('--image', default=None, help='Docker image name to run in the VM')
+@click.option('--port', type=int, default=None, help='Port to expose from the VM')
+@click.option('--os', 'os_name', default=None, help='OS variant (e.g., ubuntu22.04, fedora38)')
 @click.option("--mem", default="4096", help="RAM for the VM (MB)")
 @click.option("--disk", default="20", help="Disk size for the VM (GB)")
 @click.option("--cpus", default=2, help="Number of vCPUs")
