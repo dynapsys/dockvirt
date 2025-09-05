@@ -23,8 +23,8 @@ pip install jinja2
 **Opis:** `dockvirt --help` działa, ale inne komendy zwracają błędy lub nie odpowiadają
 
 **Rozwiązania:**
-- [ ] Dodać więcej debugowania do CLI
-- [ ] Sprawdzić import statements w cli.py
+- [x] Dodać więcej debugowania do CLI
+- [x] Sprawdzić import statements w cli.py
 - [ ] Przetestować podstawowe komendy ręcznie
 - [ ] Dodać logging do każdej funkcji CLI
 

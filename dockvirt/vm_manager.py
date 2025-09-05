@@ -142,8 +142,10 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
 
 
 def destroy_vm(name):
+    logger.info(f"Destroying VM: {name}")
     run(f"virsh destroy {name} || true")
     run(f"virsh undefine {name} --remove-all-storage")
+    logger.info(f"VM {name} destroyed successfully")
 
 
 def get_vm_ip(name):
