@@ -1,4 +1,4 @@
-# Domyślna konfiguracja dla statycznej strony na Nginx
+# Domyślna konfiguracja dla statycznej strony na Nginx - HTTP najpierw
 # Ten plik działa jak .env - definiuje domyślne wartości dla dockvirt
 
 name=static-site
