@@ -77,6 +77,17 @@ All examples have been updated to use the latest features:
 - **Configuration system** - `~/.dockvirt/config.yaml` with predefined settings
 - **Simplified CLI** - instead of `--base-image` and `--os-variant`, just use `--os`
 
+Tip: Prefer the local repository venv binary to ensure the latest CLI:
+
+```bash
+# From repository root
+make install
+source .venv-3.13/bin/activate
+dockvirt --help
+# Or invoke explicitly without activating:
+.venv-3.13/bin/dockvirt --help
+```
+
 ## 📋 List of examples
 
 ### [1. Static Nginx Website](./1-static-nginx-website/)
@@ -175,7 +186,7 @@ flowchart TD
 │     variant: ubuntu22.04               │
 │   fedora38:                            │
 │     url: https://download.fedora...     │ 
-│     variant: fedora-cloud-base-38       │
+│     variant: fedora38       │
 │   debian12:     # Your configuration   │
 │     url: https://cloud.debian.org...    │
 │     variant: debian12                   │
@@ -256,6 +267,47 @@ python ../scripts/test_examples.py 1-static-nginx-website
 - Use `dockvirt down --name <name>` to remove a VM
 - Use `dockvirt ip --name <name>` to check the VM's IP
 - The examples work with both Ubuntu and Fedora
+
+### 🔎 Getting the VM IP
+
+```bash
+dockvirt ip --name <vm_name>
+```
+
+If you test HTTP by IP with Caddy/reverse proxy inside the VM, include a Host header:
+
+```bash
+curl -H 'Host: app.local' http://<ip>/
+```
+
+### 🔌 Networking: NAT vs Bridge (LAN)
+
+By default, libvirt NAT (`network=default`) is used. To make VMs visible in your LAN, use a Linux bridge (e.g., `br0`).
+
+- Create a bridge with NetworkManager (Fedora example):
+
+```bash
+sudo nmcli con add type bridge ifname br0 con-name br0
+sudo nmcli con add type bridge-slave ifname enp3s0 master br0
+sudo nmcli con modify br0 ipv4.method auto ipv6.method auto
+sudo nmcli con up br0
+```
+
+- Run a VM on the bridge:
+
+```bash
+dockvirt up --net bridge=br0
+```
+
+- Persist per project in `.dockvirt`:
+
+```ini
+net=bridge=br0
+```
+
+With bridge networking, VMs receive a LAN IP and are visible to other machines on your network.
+
+> Note: Do not run `make` or `dockvirt` with `sudo`. Tools will request sudo only when necessary and act on your real HOME.
 
 ### 🧪 Compatibility testing
 The test script checks:

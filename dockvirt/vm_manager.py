@@ -235,7 +235,7 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
 def destroy_vm(name):
     logger.info(f"Destroying VM: {name}")
     run(f"virsh destroy {name} || true")
-    run(f"virsh undefine {name} --remove-all-storage")
+    run(f"virsh undefine {name} --remove-all-storage || true")
     logger.info(f"VM {name} destroyed successfully")
 
 
@@ -247,6 +247,18 @@ def get_vm_ip(name):
     try:
         out = run(
             f"virsh --connect qemu:///system domifaddr {name} --source lease --full"
+        )
+        for line in out.splitlines():
+            m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})/\d+", line)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+
+    # 1b) Try qemu-guest-agent if available (works with bridged networking)
+    try:
+        out = run(
+            f"virsh --connect qemu:///system domifaddr {name} --source agent --full"
         )
         for line in out.splitlines():
             m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})/\d+", line)

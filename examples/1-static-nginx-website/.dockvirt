@@ -6,3 +6,5 @@ domain=static-site.local
 image=my-static-website:latest
 port=80
 os=ubuntu22.04
+net=bridge=br0
+net=bridge=br0

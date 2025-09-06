@@ -272,7 +272,7 @@ images:
     variant: ubuntu22.04
   fedora38:
     name: fedora38
-    url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
+    url: https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
     variant: fedora38
 ```
 
@@ -366,6 +366,43 @@ Tip: If you use a reverse proxy (Caddy) inside the VM, IP-based checks may requi
 ```bash
 curl -H 'Host: my-app.local' http://<ip_address>/
 ```
+
+### 🔎 Getting the VM IP address
+
+Use the built-in `ip` subcommand:
+
+```bash
+dockvirt ip --name <vm_name>
+```
+
+Note: The VM image installs and enables `qemu-guest-agent`, so IP detection works with both NAT and bridged networking.
+
+### 🔌 Networking: NAT vs Bridge (LAN)
+
+By default, VMs use libvirt NAT (`network=default`). To expose a VM directly in your LAN, use a Linux bridge (e.g., `br0`) and run with `--net bridge=br0`.
+
+- One-time (Fedora/NetworkManager) bridge creation example:
+
+```bash
+sudo nmcli con add type bridge ifname br0 con-name br0
+sudo nmcli con add type bridge-slave ifname enp3s0 master br0
+sudo nmcli con modify br0 ipv4.method auto ipv6.method auto
+sudo nmcli con up br0
+```
+
+- Per-VM:
+
+```bash
+dockvirt up --net bridge=br0
+```
+
+- Or persist at project level by adding to `.dockvirt`:
+
+```ini
+net=bridge=br0
+```
+
+With bridge networking, the VM receives a LAN IP and is visible to other machines on your network.
 
 The `.dockvirt` file has priority over the default parameters, but CLI parameters override everything.
 

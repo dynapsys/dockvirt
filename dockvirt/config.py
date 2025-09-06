@@ -20,7 +20,7 @@ DEFAULT_CONFIG = {
             'variant': 'ubuntu22.04'
         },
         'fedora38': {
-            'url': ('https://download.fedoraproject.org/pub/fedora/linux/'
+            'url': ('https://archives.fedoraproject.org/pub/archive/fedora/linux/'
                     'releases/38/Cloud/x86_64/images/'
                     'Fedora-Cloud-Base-38-1.6.x86_64.qcow2'),
             'variant': 'fedora38'

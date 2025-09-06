@@ -28,6 +28,9 @@ dev = [
     "pytest",
     "twine",
     "build",
+    "flake8",
+    "black",
+    "isort",
 ]
 
 [project.scripts]

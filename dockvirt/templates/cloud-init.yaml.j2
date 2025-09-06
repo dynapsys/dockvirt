@@ -11,6 +11,7 @@ package_upgrade: true
 packages:
   - curl
   - git
+  - qemu-guest-agent
 
 # Write application files, Docker Compose and Caddy files
 write_files:
@@ -76,5 +77,6 @@ runcmd:
   - curl -fsSL https://get.docker.com -o get-docker.sh
   - sh get-docker.sh
   - usermod -aG docker {{ remote_user }}
+  - systemctl enable --now qemu-guest-agent || true
   - chown -R {{ remote_user }}:{{ remote_user }} /home/{{ remote_user }}
   - runuser -l {{ remote_user }} -c '/home/{{ remote_user }}/build-and-run.sh'

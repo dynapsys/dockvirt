@@ -43,6 +43,9 @@ help:
 
 install:
 	$(PIP) install -e .[dev]
+	@echo "🛠️ Repairing docs and validating CLI commands..."
+	$(PY) scripts/repair_docs.py --apply --report repair_docs_report.md
+	$(PY) scripts/test_commands_robust.py
 
 build:
 	$(PY) -m build
@@ -101,7 +104,7 @@ format:
 	@echo "✅ Code formatted"
 
 # Publishing with automatic versioning
-publish: clean version-patch build
+publish: clean version-patch repair-docs build
 	@echo "📦 Publishing package to PyPI..."
 	@new_version=$$($(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	echo "Publishing version $$new_version"; \
@@ -141,6 +144,11 @@ test-commands: install
 docs:
 	@echo "📚 Building documentation..."
 	@echo "Documentation is in README.md and examples/"
+
+# Repair documentation (auto-fix and report)
+repair-docs:
+	@echo "🧹 Repairing documentation and normalizing examples..."
+	$(PY) scripts/repair_docs.py --apply --report repair_docs_report.md
 
 # Automation Agent
 agent:
