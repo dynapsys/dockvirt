@@ -3,8 +3,16 @@
 .PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor
 
 # Configurable Python (allow overriding: make <target> PY=path/to/python)
-PY ?= python3
+# Auto-detect local venv if present, else fallback to system python3
+PY ?= $(shell if [ -x .venv-3.13/bin/python ]; then echo .venv-3.13/bin/python; \
+elif [ -x .venv/bin/python ]; then echo .venv/bin/python; \
+else command -v python3; fi)
 PIP = $(PY) -m pip
+
+# Sensible defaults for tests
+export LIBVIRT_DEFAULT_URI ?= qemu:///system
+export DOCKVIRT_TEST_IMAGE ?= nginx:latest
+export DOCKVIRT_TEST_OS_VARIANT ?= ubuntu22.04
 
 help:
 	@echo "Available commands:"
@@ -35,14 +43,10 @@ build:
 	$(PY) -m build
 
 test-e2e:
-	@if [ -z "$${DOCKVIRT_TEST_IMAGE}" ]; then \
-		echo "Error: Environment variable DOCKVIRT_TEST_IMAGE is not set."; \
-		exit 1; \
-	fi
-	@if [ -z "$${DOCKVIRT_TEST_OS_VARIANT}" ]; then \
-		echo "Error: Environment variable DOCKVIRT_TEST_OS_VARIANT is not set."; \
-		exit 1; \
-	fi
+	@echo "Using PY=$(PY)"
+	@echo "LIBVIRT_DEFAULT_URI=$(LIBVIRT_DEFAULT_URI)"
+	@echo "DOCKVIRT_TEST_IMAGE=$(DOCKVIRT_TEST_IMAGE)"
+	@echo "DOCKVIRT_TEST_OS_VARIANT=$(DOCKVIRT_TEST_OS_VARIANT)"
 	$(PY) -m pytest -v tests/test_e2e.py
 
 # Versioning

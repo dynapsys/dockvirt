@@ -402,7 +402,10 @@ def main():
         result = tester.test_example(example_dir)
         tester.test_results[example_name] = result
 
-        success = result["build_success"]
+        success = (
+            result.get("build_success", False)
+            and all(t.get("success", False) for t in result.get("os_tests", {}).values())
+        )
     else:
         # Test all examples
         success = tester.run_all_tests()
