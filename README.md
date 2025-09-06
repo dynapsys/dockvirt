@@ -468,7 +468,11 @@ sudo find "$HOME/.dockvirt" -type f -name '*.qcow2' -exec setfacl -m u:qemu:rw {
 sudo find "$HOME/.dockvirt" -type f -name '*.iso'   -exec setfacl -m u:qemu:r  {} +
 
 # SELinux labels (Fedora/SELinux)
-sudo semanage fcontext -a -t svirt_image_t "$HOME/.dockvirt(/.*)?" || true
+# IMPORTANT: Label only image files, not the entire directory
+# If you previously labeled the whole tree, remove that rule first:
+#   sudo semanage fcontext -d -t svirt_image_t "$HOME/.dockvirt(/.*)?"
+sudo semanage fcontext -a -t svirt_image_t "$HOME/.dockvirt(/.*)?\\.qcow2"
+sudo semanage fcontext -a -t svirt_image_t "$HOME/.dockvirt(/.*)?\\.iso"
 sudo restorecon -Rv "$HOME/.dockvirt"
 ```
 

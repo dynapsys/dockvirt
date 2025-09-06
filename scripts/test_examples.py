@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from click.testing import CliRunner
+import re
 
 from dockvirt.cli import main as cli_main
 
@@ -107,8 +108,13 @@ class ExampleTester:
         # Try to get VM IP and test connectivity
         ip_result = self.runner.invoke(cli_main, ["ip", "--name", vm_name])
         if ip_result.exit_code == 0 and ip_result.output.strip():
-            ip = ip_result.output.strip()
-            print(f"  🌐 VM IP: {ip}")
+            # Extract bare IPv4 address from CLI output
+            m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", ip_result.output)
+            ip = m.group(1) if m else ""
+            if ip:
+                print(f"  🌐 VM IP: {ip}")
+            else:
+                print("  ⚠️  Could not parse IP from CLI output")
 
             # Test HTTP connectivity
             http_result = subprocess.run(

@@ -2,6 +2,10 @@
 
 .PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor
 
+# Configurable Python (allow overriding: make <target> PY=path/to/python)
+PY ?= python3
+PIP = $(PY) -m pip
+
 help:
 	@echo "Available commands:"
 	@echo "  install         - Install production and development dependencies"
@@ -25,10 +29,10 @@ help:
 	@echo "  repair          - Run comprehensive command validation"
 
 install:
-	pip install -e .[dev]
+	$(PIP) install -e .[dev]
 
 build:
-	python -m build
+	$(PY) -m build
 
 test-e2e:
 	@if [ -z "$${DOCKVIRT_TEST_IMAGE}" ]; then \
@@ -39,14 +43,14 @@ test-e2e:
 		echo "Error: Environment variable DOCKVIRT_TEST_OS_VARIANT is not set."; \
 		exit 1; \
 	fi
-	pytest -v tests/test_e2e.py
+	$(PY) -m pytest -v tests/test_e2e.py
 
 # Versioning
 version-show:
-	@python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
+	@$(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
 
 version-patch:
-	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
+	@current_version=$$($(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$major.$$minor.$$((patch + 1))"; \
 	echo "Bumping version from $$current_version to $$new_version"; \
@@ -54,7 +58,7 @@ version-patch:
 	echo "✅ Version updated to $$new_version"
 
 version-minor:
-	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
+	@current_version=$$($(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$major.$$((minor + 1)).0"; \
 	echo "Bumping version from $$current_version to $$new_version"; \
@@ -62,7 +66,7 @@ version-minor:
 	echo "✅ Version updated to $$new_version"
 
 version-major:
-	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
+	@current_version=$$($(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$((major + 1)).0.0"; \
 	echo "Bumping version from $$current_version to $$new_version"; \
@@ -72,27 +76,27 @@ version-major:
 # Development tools
 dev-setup: install
 	@echo "🔧 Setting up the development environment..."
-	pip install flake8 black isort
+	$(PIP) install flake8 black isort
 	@echo "✅ Development environment ready"
 
 lint:
 	@echo "🔍 Linting the code..."
-	flake8 dockvirt/ --max-line-length=88 --ignore=E203,W503
-	black --check dockvirt/
-	isort --check-only dockvirt/
+	$(PY) -m flake8 dockvirt/ --max-line-length=88 --ignore=E203,W503
+	$(PY) -m black --check dockvirt/
+	$(PY) -m isort --check-only dockvirt/
 
 format:
 	@echo "🎨 Formatting the code..."
-	black dockvirt/
-	isort dockvirt/
+	$(PY) -m black dockvirt/
+	$(PY) -m isort dockvirt/
 	@echo "✅ Code formatted"
 
 # Publishing with automatic versioning
 publish: clean version-patch build
 	@echo "📦 Publishing package to PyPI..."
-	@new_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
+	@new_version=$$($(PY) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	echo "Publishing version $$new_version"; \
-	twine upload dist/*; \
+	$(PY) -m twine upload dist/*; \
 	echo "✅ Version $$new_version published to PyPI"
 
 clean:
@@ -111,17 +115,17 @@ install-system:
 # Testing examples
 test-examples: install
 	@echo "🧪 Testing all examples..."
-	python3 scripts/test_examples.py
+	$(PY) scripts/test_examples.py
 
 # System dependency check
 check:
 	@echo "🔍 Checking system dependencies..."
-	@python3 -c "from dockvirt.system_check import check_system_dependencies; check_system_dependencies()"
+	@$(PY) -c "from dockvirt.system_check import check_system_dependencies; check_system_dependencies()"
 
 # Test all commands from documentation
 test-commands: install
 	@echo "🧪 Testing all dockvirt commands..."
-	python3 scripts/test_commands_robust.py
+	$(PY) scripts/test_commands_robust.py
 	@echo "✅ Command testing complete - check test_results.md"
 
 # Build documentation
@@ -132,21 +136,21 @@ docs:
 # Doctor (diagnostics and optional fixes)
 doctor:
 	@echo "🩺 Running Dockvirt Doctor..."
-	python3 scripts/doctor.py
+	$(PY) scripts/doctor.py
 
 doctor-fix:
 	@echo "🩺 Running Dockvirt Doctor with auto-fix..."
-	python3 scripts/doctor.py --fix --yes
+	$(PY) scripts/doctor.py --fix --yes
 
 # Repair and validate all commands
 repair: install
 	@echo "🔧 Validating all commands from documentation..."
-	python3 scripts/test_commands_robust.py
+	$(PY) scripts/test_commands_robust.py
 	@echo "✅ Validation complete - check test_results.md"
 
 # Quick development test
 test-quick: install
 	@echo "🎯 Running quick tests..."
-	dockvirt --help > /dev/null && echo "✅ CLI works"
-	dockvirt check || echo "⚠️  Some dependencies missing"
+	$(PY) -m dockvirt.cli --help > /dev/null && echo "✅ CLI works"
+	$(PY) -m dockvirt.cli check || echo "⚠️  Some dependencies missing"
 	@echo "✅ Quick test complete"
