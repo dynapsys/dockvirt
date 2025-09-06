@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run Dockvirt from the project virtualenv (source tree version)
+# Usage: scripts/dockvirt-local [dockvirt-args...]
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+VENV_BIN="$ROOT_DIR/.venv-3.13/bin"
+if [ ! -x "$VENV_BIN/python" ]; then
+  echo "[ERROR] Project venv not found at $VENV_BIN. Create it and install deps." >&2
+  echo "        Example:" >&2
+  echo "          python3 -m venv .venv-3.13" >&2
+  echo "          . .venv-3.13/bin/activate && pip install -U pip && pip install -e ." >&2
+  exit 2
+fi
+exec "$VENV_BIN/python" -m dockvirt.cli "$@"

@@ -52,6 +52,12 @@ This example shows how to use `dockvirt` to run a simple static website served b
     curl -H 'Host: static-site.local' http://<ip_address>/
     ```
 
+    To quickly get the VM IP using the local CLI:
+
+    ```bash
+    ../../.venv-3.13/bin/dockvirt ip --name static-site
+    ```
+
 3.  **Open the site in your browser**:
     Visit `http://static-site.local` to see your site.
 
@@ -61,6 +67,25 @@ This example shows how to use `dockvirt` to run a simple static website served b
     ```
 
 > Note: Do not run `dockvirt` or `make` with `sudo`. The tools request sudo only when needed and act on your real HOME.
+
+### Networking: NAT vs Bridge (LAN)
+
+By default, libvirt NAT (`network=default`) is used. To expose the VM directly in your LAN, create a Linux bridge (e.g., `br0`) and either add `net=bridge=br0` to `.dockvirt` or run `dockvirt up --net bridge=br0`.
+
+Bridge creation example (Fedora/NetworkManager):
+
+```bash
+sudo nmcli con add type bridge ifname br0 con-name br0
+sudo nmcli con add type bridge-slave ifname enp3s0 master br0
+sudo nmcli con modify br0 ipv4.method auto ipv6.method auto
+sudo nmcli con up br0
+```
+
+Run the VM on the bridge:
+
+```bash
+../../.venv-3.13/bin/dockvirt up --net bridge=br0
+```
 
 ## What's happening in the background?
 

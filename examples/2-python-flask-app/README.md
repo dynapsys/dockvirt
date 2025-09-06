@@ -74,3 +74,39 @@ When you run `dockvirt up`, the tool:
 4. Builds a Docker image with the Flask application inside the VM
 5. Starts the application container with a reverse proxy
 6. Configures access via the domain
+
+## Getting the VM IP
+
+Use the local CLI from the repository venv to retrieve the VM IP:
+
+```bash
+../../.venv-3.13/bin/dockvirt ip --name flask-app
+```
+
+If you test HTTP via IP and use a reverse proxy (Caddy) inside the VM, include a Host header:
+
+```bash
+curl -H 'Host: flask-app.local' http://<ip>/
+```
+
+## Networking: NAT vs Bridge (LAN)
+
+By default, libvirt NAT (`network=default`) is used. To expose the VM directly in your LAN, create a bridge (e.g., `br0`) and run:
+
+```bash
+../../.venv-3.13/bin/dockvirt up --net bridge=br0
+```
+
+Persist per project by adding to `.dockvirt`:
+
+```ini
+net=bridge=br0
+```
+
+Example bridge creation (Fedora/NetworkManager):
+
+```bash
+sudo nmcli con add type bridge ifname br0 con-name br0
+sudo nmcli con add type bridge-slave ifname enp3s0 master br0
+sudo nmcli con modify br0 ipv4.method auto ipv6.method auto
+sudo nmcli con up br0
