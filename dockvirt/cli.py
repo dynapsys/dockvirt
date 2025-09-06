@@ -140,3 +140,7 @@ def generate_image(image_type, size, output, apps, domains, config):
     except Exception as e:
         click.echo(f"❌ Error generating image: {e}")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
