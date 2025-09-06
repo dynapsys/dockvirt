@@ -1,16 +1,10 @@
 version: '3.8'
 services:
   app:
-    image: {{ image_name }}:latest
+    image: frontend:latest
     restart: unless-stopped
     networks:
       - app-network
-    {% if ports %}
-    ports:
-      {% for port in ports %}
-      - "{{ port }}:{{ port }}"
-      {% endfor %}
-    {% endif %}
     
   caddy:
     image: caddy:2-alpine
@@ -19,10 +13,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile-https.json:/etc/caddy/caddy.json:ro
+      - ./Caddyfile.json:/etc/caddy/caddy.json:ro
       - caddy_data:/data
       - caddy_config:/config
-      - {{ home_dir }}/.dockvirt/certs:/certs:ro
+      - /home/ubuntu/.dockvirt/certs:/certs:ro
     networks:
       - app-network
     command: ["caddy", "run", "--config", "/etc/caddy/caddy.json"]
