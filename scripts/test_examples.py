@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from click.testing import CliRunner
 import re
+import os
 
 from dockvirt.cli import main as cli_main
 
@@ -24,6 +25,28 @@ class ExampleTester:
         self.test_results: Dict[str, Any] = {}
         self.test_os_variants = ["ubuntu22.04", "fedora38"]
         self.runner = CliRunner()
+        # Ensure CLI uses system libvirt unless overridden
+        self.env = os.environ.copy()
+        self.env.setdefault("LIBVIRT_DEFAULT_URI", "qemu:///system")
+
+    def parse_dockvirt(self, example_dir: Path) -> Dict[str, str]:
+        """Parse .dockvirt key=value pairs into a dict."""
+        cfg: Dict[str, str] = {}
+        fpath = example_dir / ".dockvirt"
+        if not fpath.exists():
+            return cfg
+        try:
+            with fpath.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        cfg[k.strip()] = v.strip()
+        except Exception as e:
+            print(f"  ⚠️  Failed to parse {fpath}: {e}")
+        return cfg
 
     def get_examples(self) -> List[Path]:
         """Get list of example directories."""
@@ -40,15 +63,27 @@ class ExampleTester:
         print(f"  📦 Building Docker image for {example_dir.name}...")
 
         # Get image name from .dockvirt or use directory name
-        image_name = f"test-{example_dir.name}"
-        if (example_dir / ".dockvirt").exists():
-            with open(example_dir / ".dockvirt", "r") as f:
-                for line in f:
-                    if line.startswith("image="):
-                        image_name = line.split("=", 1)[1].strip()
-                        break
+        settings = self.parse_dockvirt(example_dir)
+        image_name = settings.get("image", f"test-{example_dir.name}")
 
-        # We still need to run docker build as a subprocess
+        # Host-side Docker build is optional now.
+        # Skip if instructed or if Docker is unavailable; VM will build using cloud-init.
+        if os.environ.get("SKIP_HOST_BUILD") == "1":
+            print("  ⏭️  Skipping host Docker build (SKIP_HOST_BUILD=1). VM will build.")
+            return True, image_name
+
+        if not (example_dir / "Dockerfile").exists():
+            print("  ⏭️  No Dockerfile in example; skipping host build.")
+            return True, image_name
+
+        docker_ok = subprocess.run(
+            "docker --version", shell=True, capture_output=True, text=True
+        ).returncode == 0
+        if not docker_ok:
+            print("  ⏭️  Docker not found on host; skipping host build. VM will build.")
+            return True, image_name
+
+        # Attempt host build; if it fails, continue (VM will build).
         result = subprocess.run(
             f"docker build -t {image_name} .",
             shell=True,
@@ -57,22 +92,21 @@ class ExampleTester:
             cwd=example_dir,
             timeout=600,  # 10 minutes for build
         )
-        success = result.returncode == 0
-        stderr = result.stderr
-
-        if success:
+        if result.returncode == 0:
             print(f"  ✅ Image {image_name} built successfully")
             return True, image_name
         else:
-            print(f"  ❌ Failed to build image: {stderr}")
-            return False, ""
+            print("  ⚠️  Host build failed; proceeding (VM will build image).")
+            return True, image_name
 
     def test_example_vm(
         self, example_dir: Path, image_name: str, os_variant: str
     ) -> Tuple[bool, Optional[str]]:
         """Test example by creating VM and checking if it responds."""
         vm_name = f"test-{example_dir.name}-{os_variant}"
-        domain = f"{vm_name}.test.local"
+        settings = self.parse_dockvirt(example_dir)
+        domain = settings.get("domain", f"{vm_name}.test.local")
+        port = settings.get("port", "80")
 
         print(f"  🚀 Creating VM: {vm_name} with {os_variant}...")
 
@@ -88,11 +122,12 @@ class ExampleTester:
                 "--image",
                 image_name,
                 "--port",
-                "80",
+                str(port),
                 "--os",
                 os_variant,
             ],
             catch_exceptions=False,  # So we see the full traceback
+            env=self.env,
         )
 
         if result.exit_code != 0:
@@ -106,19 +141,28 @@ class ExampleTester:
         time.sleep(60)  # Wait 1 minute for startup
 
         # Try to get VM IP and test connectivity
-        ip_result = self.runner.invoke(cli_main, ["ip", "--name", vm_name])
+        ip_result = self.runner.invoke(
+            cli_main, ["ip", "--name", vm_name], env=self.env
+        )
+        ip_ok = False
+        ip_http_ok = False
+        domain_resolves = False
+        domain_http_ok = False
+
         if ip_result.exit_code == 0 and ip_result.output.strip():
             # Extract bare IPv4 address from CLI output
             m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", ip_result.output)
             ip = m.group(1) if m else ""
             if ip:
                 print(f"  🌐 VM IP: {ip}")
+                ip_ok = True
             else:
                 print("  ⚠️  Could not parse IP from CLI output")
 
-            # Test HTTP connectivity
+            # Test HTTP connectivity (IP)
+            ip_url = f"http://{ip}/" if str(port) == "80" else f"http://{ip}:{port}/"
             http_result = subprocess.run(
-                f"curl -s -o /dev/null -w '%{{http_code}}' http://{ip}",
+                f"curl -s -o /dev/null -w '%{{http_code}}' {ip_url}",
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -126,16 +170,60 @@ class ExampleTester:
             )
             if http_result.returncode == 0 and http_result.stdout.strip() == "200":
                 print("  ✅ VM responding to HTTP requests")
+                ip_http_ok = True
             else:
                 print(f"  ⚠️  VM created but HTTP not responding (code: {http_result.stdout.strip()})")
+
+            # Check domain DNS resolution
+            try:
+                dns = subprocess.run(
+                    f"getent hosts {domain}", shell=True,
+                    capture_output=True, text=True, timeout=5
+                )
+                domain_resolves = dns.returncode == 0 and dns.stdout.strip() != ""
+            except Exception:
+                domain_resolves = False
+            if domain_resolves:
+                print(f"  🧭 Domain resolves: {domain}")
+            else:
+                print(f"  ❌ Domain does not resolve locally: {domain}")
+                print(f"     Tip: sudo sh -c 'echo \"{ip} {domain}\" >> /etc/hosts'")
+
+            # HTTP check via domain URL (respect port)
+            dom_url = (
+                f"http://{domain}/" if str(port) == "80" else f"http://{domain}:{port}/"
+            )
+            http_dom = subprocess.run(
+                f"curl -s -o /dev/null -w '%{{http_code}}' {dom_url}",
+                shell=True, capture_output=True, text=True, timeout=15
+            )
+            if http_dom.returncode == 0 and http_dom.stdout.strip() == "200":
+                print(f"  ✅ HTTP via domain OK: {dom_url}")
+                domain_http_ok = True
+            else:
+                print(f"  ⚠️  HTTP via domain failed (code: {http_dom.stdout.strip()}): {dom_url}")
         else:
             print("  ⚠️  Could not get VM IP address.")
 
         # Cleanup - destroy VM
         print(f"  🧹 Cleaning up VM {vm_name}...")
-        self.runner.invoke(cli_main, ["down", "--name", vm_name])
+        self.runner.invoke(cli_main, ["down", "--name", vm_name], env=self.env)
 
-        return True, None
+        # Require domain resolution and HTTP success via domain
+        success = domain_resolves and domain_http_ok
+        error = None
+        if not success:
+            reasons = []
+            if not ip_ok:
+                reasons.append("no IP")
+            if ip_ok and not ip_http_ok:
+                reasons.append("HTTP on IP failed")
+            if not domain_resolves:
+                reasons.append("domain not resolving locally")
+            if domain_resolves and not domain_http_ok:
+                reasons.append("HTTP via domain failed")
+            error = ", ".join(reasons) if reasons else "unknown"
+        return success, error
 
     def test_example(self, example_dir: Path) -> Dict[str, Any]:
         """Test single example across different OS variants."""
@@ -147,6 +235,7 @@ class ExampleTester:
             "path": str(example_dir),
             "build_success": False,
             "image_name": "",
+            "domain": self.parse_dockvirt(example_dir).get("domain", ""),
             "os_tests": {},
         }
 
@@ -169,6 +258,7 @@ class ExampleTester:
                 results["os_tests"][os_variant] = {
                     "success": vm_success,
                     "error": error_msg,
+                    "domain": results["domain"],
                 }
 
                 if vm_success:
@@ -197,7 +287,7 @@ class ExampleTester:
             1 for r in self.test_results.values() if r["build_success"]
         )
 
-        report.append(f"**Summary:**")
+        report.append("**Summary:**")
         report.append(f"- Total Examples: {total_examples}")
         report.append(f"- Successful Builds: {successful_builds}")
         report.append("")
@@ -215,11 +305,12 @@ class ExampleTester:
                 report.append("")
                 report.append("**OS Compatibility:**")
                 for os_variant, test_result in result["os_tests"].items():
+                    dom = test_result.get("domain", "")
                     if test_result["success"]:
-                        report.append(f"- ✅ {os_variant}: SUCCESS")
+                        report.append(f"- ✅ {os_variant}: SUCCESS (domain: {dom})")
                     else:
                         error = test_result.get("error", "Unknown error")
-                        report.append(f"- ❌ {os_variant}: FAILED - {error}")
+                        report.append(f"- ❌ {os_variant}: FAILED - {error} (domain: {dom})")
 
             report.append("")
 
