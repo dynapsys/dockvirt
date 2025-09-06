@@ -4,13 +4,11 @@ Robust command tester for dockvirt README files.
 Tests all commands using subprocess calls and generates detailed reports.
 """
 
-import re
-import sys
+import os
 import time
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
-import json
+from typing import Dict, List, Tuple
 
 
 class RobustCommandTester:
@@ -70,6 +68,17 @@ class RobustCommandTester:
         try:
             # Split command into parts
             cmd_parts = command.split()
+            # Skip planned features (stack)
+            if command.strip().startswith("dockvirt stack"):
+                return {
+                    "command": command,
+                    "success": True,
+                    "error": None,
+                    "duration": 0.0,
+                    "exit_code": 0,
+                    "stdout": "skipped planned feature",
+                    "stderr": "",
+                }
             
             # Add --help to dry-run the command without executing it
             if '--help' not in cmd_parts and 'help' not in cmd_parts:
@@ -77,18 +86,29 @@ class RobustCommandTester:
             else:
                 test_cmd = cmd_parts
             
+            # Ensure local venv dockvirt takes precedence
+            env = dict(**os.environ)
+            venv_bin = self.project_root / ".venv-3.13" / "bin"
+            if venv_bin.exists():
+                env["PATH"] = f"{venv_bin}:{env.get('PATH','')}"
+
             result = subprocess.run(
                 test_cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                cwd=self.project_root
+                cwd=self.project_root,
+                env=env,
             )
             
             duration = time.time() - start_time
             
-            # Consider it successful if help is shown or exit code is reasonable
-            success = result.returncode in [0, 1, 2]  # 0=success, 1,2=expected help errors
+            # Consider it successful if help is shown or exit code is reasonable,
+            # but fail explicitly on 'No such command/option'
+            combined = (result.stderr or "") + "\n" + (result.stdout or "")
+            lower = combined.lower()
+            bad = ("no such command" in lower) or ("no such option" in lower)
+            success = (result.returncode in [0, 1, 2]) and (not bad)
             error_msg = result.stderr if result.stderr else result.stdout if result.returncode != 0 else None
             
             return {

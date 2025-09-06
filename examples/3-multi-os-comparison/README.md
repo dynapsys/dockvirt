@@ -53,7 +53,7 @@ images:
     variant: ubuntu22.04
   fedora38:
     url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
-    variant: fedora-cloud-base-38
+    variant: fedora38
   # Add your own image
   debian12:
     url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
@@ -98,4 +98,11 @@ ls -la ~/.dockvirt/images/
 # jammy-server-cloudimg-amd64.img
 # Fedora-Cloud-Base-38-1.6.x86_64.qcow2
 # debian-12-generic-amd64.qcow2
+```
+
+Tip: If a reverse proxy is used in the VM (Caddy), IP-based HTTP checks may require a Host header:
+
+```bash
+curl -H 'Host: ubuntu-test.local' http://<ip>/
+curl -H 'Host: fedora-test.local' http://<ip>/
 ```

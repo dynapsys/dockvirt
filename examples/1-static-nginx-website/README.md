@@ -16,6 +16,10 @@ This example shows how to use `dockvirt` to run a simple static website served b
 
     # Run dockvirt - parameters are in the .dockvirt file
     dockvirt up
+    
+    # Developer tip: if another dockvirt is first on your PATH (e.g., Homebrew),
+    # use the project venv binary explicitly to ensure the latest local CLI:
+    # ../../.venv-3.13/bin/dockvirt up
     ```
 
     Or you can use CLI parameters:
@@ -42,6 +46,12 @@ This example shows how to use `dockvirt` to run a simple static website served b
     <ip_address> static-site.local
     ```
 
+    If a reverse proxy (Caddy) is used inside the VM, IP-based checks may require a Host header:
+
+    ```bash
+    curl -H 'Host: static-site.local' http://<ip_address>/
+    ```
+
 3.  **Open the site in your browser**:
     Visit `http://static-site.local` to see your site.
 
@@ -49,6 +59,8 @@ This example shows how to use `dockvirt` to run a simple static website served b
     ```bash
     dockvirt down --name static-site
     ```
+
+> Note: Do not run `dockvirt` or `make` with `sudo`. The tools request sudo only when needed and act on your real HOME.
 
 ## What's happening in the background?
 

@@ -16,6 +16,10 @@ This example shows how to run a simple Python Flask application using `dockvirt`
     # Use the default configuration from the .dockvirt file
     dockvirt up
     
+    # Developer tip: if another dockvirt is first on your PATH (e.g., Homebrew),
+    # use the project venv binary explicitly to ensure the latest local CLI:
+    # ../../.venv-3.13/bin/dockvirt up
+    
     # Or change the OS to Fedora (edit .dockvirt or use the parameter)
     dockvirt up --os fedora38
     ```
@@ -37,6 +41,12 @@ This example shows how to run a simple Python Flask application using `dockvirt`
     <ip_address> flask-app.local
     ```
 
+    If a reverse proxy (Caddy) is used inside the VM, IP-based checks may require a Host header:
+    
+    ```bash
+    curl -H 'Host: flask-app.local' http://<ip_address>/
+    ```
+
 3.  **Open the application in your browser**:
     Visit `http://flask-app.local` to see your application.
 
@@ -44,6 +54,8 @@ This example shows how to run a simple Python Flask application using `dockvirt`
     ```bash
     dockvirt down --name flask-app
     ```
+
+> Note: Do not run `dockvirt` or `make` with `sudo`. The tools request sudo only when needed and act on your real HOME.
 
 ## Automatic Image Downloading
 
