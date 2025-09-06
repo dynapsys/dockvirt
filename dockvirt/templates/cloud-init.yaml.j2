@@ -47,7 +47,16 @@ write_files:
       fi
       
       # Wait for Docker to be ready
-      sleep 10
+      echo "Waiting for Docker service to be active..."
+      until systemctl is-active --quiet docker; do
+          systemctl start docker || true
+          sleep 2
+      done
+      # Ensure Docker CLI is responsive (may take a moment after service is active)
+      for i in {1..30}; do
+          sudo -E docker info >/dev/null 2>&1 && break
+          sleep 2
+      done
       
       # Build Docker image if Dockerfile exists (use sudo to avoid group delay)
       {% if dockerfile_content %}
