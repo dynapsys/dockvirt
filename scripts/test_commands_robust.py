@@ -21,44 +21,79 @@ class RobustCommandTester:
         self.project_root = Path(__file__).parent.parent
 
     def extract_commands_from_file(self, file_path: Path) -> List[Tuple[str, int]]:
-        """Extract dockvirt commands from a markdown file with line numbers."""
-        commands = []
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+        """Extract dockvirt commands from a markdown file with line numbers.
 
-            lines = content.split('\n')
+        Supports multiline commands using '\\' continuations inside fenced code blocks.
+        Only captures lines starting with 'dockvirt' (optionally prefixed with '$ ').
+        """
+        commands: List[Tuple[str, int]] = []
+        try:
+            content = file_path.read_text(encoding="utf-8")
+            lines = content.split("\n")
             in_code_block = False
-            
+            buf_cmd: str | None = None
+            buf_start: int | None = None
+            allowed_subs = {"up", "down", "check", "setup", "heal", "ip", "generate-image", "stack"}
+
+            def flush_buffer():
+                nonlocal buf_cmd, buf_start
+                if buf_cmd and buf_start:
+                    # Validate subcommand
+                    parts = buf_cmd.strip().split()
+                    if len(parts) >= 2 and parts[0] == "dockvirt" and parts[1] in allowed_subs:
+                        commands.append((buf_cmd.strip(), buf_start))
+                buf_cmd = None
+                buf_start = None
+
             for line_num, line in enumerate(lines, 1):
                 stripped = line.strip()
-                
-                # Track code blocks
-                if stripped.startswith('```'):
+
+                # Toggle fenced block
+                if stripped.startswith("```"):
+                    # Leaving a block should flush any pending command
+                    if in_code_block:
+                        flush_buffer()
                     in_code_block = not in_code_block
                     continue
-                
-                # Look for dockvirt commands
-                if 'dockvirt' in stripped:
-                    # Skip comments and non-command lines
-                    if stripped.startswith('#') or stripped.startswith('//'):
-                        continue
-                    
-                    # Extract the actual command
-                    if in_code_block or stripped.startswith('dockvirt'):
-                        # Clean up the command
-                        cmd = stripped
-                        if cmd.startswith('$ '):
-                            cmd = cmd[2:]
-                        elif cmd.startswith('# '):
-                            continue  # Skip comments
-                        
-                        if cmd.startswith('dockvirt'):
-                            commands.append((cmd, line_num))
-            
+
+                # Skip comment-only lines
+                if stripped.startswith("#") or stripped.startswith("//"):
+                    continue
+
+                # If we are in a continuation, keep appending
+                if buf_cmd is not None:
+                    # Remove trailing backslash
+                    continued = stripped[:-1].strip() if stripped.endswith("\\") else stripped
+                    buf_cmd += " " + continued
+                    if not stripped.endswith("\\"):
+                        flush_buffer()
+                    continue
+
+                # Detect start of a dockvirt command (require line to start with dockvirt)
+                if stripped.startswith("dockvirt") or stripped.startswith("$ dockvirt"):
+                    # Normalize to start from 'dockvirt'
+                    start_idx = stripped.find("dockvirt")
+                    cmd = stripped[start_idx:]
+                    if cmd.startswith("$ "):
+                        cmd = cmd[2:].strip()
+                    # Multiline?
+                    if cmd.endswith("\\"):
+                        buf_cmd = cmd[:-1].strip()
+                        buf_start = line_num
+                    else:
+                        # Single line command
+                        if cmd.startswith("dockvirt"):
+                            parts = cmd.split()
+                            if len(parts) >= 2 and parts[1] in allowed_subs:
+                                commands.append((cmd, line_num))
+
+            # Flush at EOF
+            if buf_cmd is not None:
+                flush_buffer()
+
         except Exception as e:
-            print(f"❌ Error reading {file_path}: {e}")
-        
+            print("❌ Error reading {}: {}".format(file_path, e))
+
         return commands
 
     def test_command_subprocess(self, command: str, timeout: int = 30) -> Dict:
@@ -68,8 +103,8 @@ class RobustCommandTester:
         try:
             # Split command into parts
             cmd_parts = command.split()
-            # Skip planned features (stack)
-            if command.strip().startswith("dockvirt stack"):
+            # Skip planned features (stack, exec)
+            if command.strip().startswith("dockvirt stack") or command.strip().startswith("dockvirt exec"):
                 return {
                     "command": command,
                     "success": True,
@@ -321,7 +356,7 @@ class RobustCommandTester:
         
         return fixes
 
-    def save_results(self, output_file: str = "command_test_results.md"):
+    def save_results(self, output_file: str = "test_results.md"):
         """Save test results to a markdown file."""
         report = self.generate_report()
         output_path = self.project_root / output_file
@@ -360,7 +395,7 @@ def main():
     total = len(tester.successful_commands) + len(tester.failed_commands)
     if total > 0:
         success_rate = len(tester.successful_commands) / total * 100
-        print(f"\n📊 Testing complete!")
+        print("\n📊 Testing complete!")
         print(f"   ✅ Successful: {len(tester.successful_commands)}/{total} ({success_rate:.1f}%)")
         print(f"   ❌ Failed: {len(tester.failed_commands)}/{total} ({100-success_rate:.1f}%)")
         

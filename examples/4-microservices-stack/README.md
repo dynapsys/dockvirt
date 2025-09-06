@@ -37,6 +37,11 @@ docker build -t microstack-api:latest ./api
 docker build -t microstack-db:latest ./database
 docker build -t microstack-monitoring:latest ./monitoring
 
+# Developer tip: ensure you use the local repo CLI from the venv if another dockvirt is on PATH
+# ../../.venv-3.13/bin/dockvirt --help
+# Or activate the venv:
+# source ../../.venv-3.13/bin/activate
+
 # Frontend
 dockvirt up --name frontend --domain app.stack.local --image microstack-frontend:latest --port 3000 --os ubuntu22.04
 
@@ -129,6 +134,14 @@ Then open:
 - **API Docs:** http://api.stack.local/docs
 - **Monitoring:** http://mon.stack.local
 
+Tip: If a reverse proxy (Caddy) is used inside the VM, IP-based HTTP checks may require a Host header. For quick checks by IP:
+
+```bash
+curl -H 'Host: app.stack.local' http://<ip_frontend>/
+curl -H 'Host: api.stack.local' http://<ip_backend>/
+curl -H 'Host: mon.stack.local' http://<ip_monitoring>/
+```
+
 ## 📊 Monitoring
 
 Grafana dashboards are available at http://mon.stack.local:
@@ -215,6 +228,8 @@ dockvirt stack destroy microservices-stack
 
 **Problem:** No external access  
 **Solution:** Check /etc/hosts and make sure the VMs have been assigned IPs
+
+> Note: Do not run `dockvirt` or `make` with `sudo`. The tools request sudo only when needed and act on your real HOME.
 
 **Problem:** High latency  
 **Solution:** Increase the VM's RAM or use SSD storage

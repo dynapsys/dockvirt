@@ -161,6 +161,16 @@ echo "🌐 Access your application at: https://lb.prod.com"
 echo "📊 Monitoring: https://mon.prod.com"
 ```
 
+Tip: Use the dockvirt CLI from the local repository virtualenv when testing locally to ensure the latest code is used:
+
+```bash
+# From repository root
+. .venv-3.13/bin/activate
+dockvirt --help
+# Or call the binary explicitly from the venv
+.venv-3.13/bin/dockvirt --help
+```
+
 ## 📊 Monitoring & Alerting
 
 ### Grafana Dashboards
@@ -217,8 +227,76 @@ echo "📊 Monitoring: https://mon.prod.com"
 
 ### Failover Procedure
 
-```bash\n#!/bin/bash\n# failover.sh\n\necho \"🚨 Starting failover procedure...\"\n\n# Promote secondary database\ndockvirt exec db-secondary -- promote-to-primary\n\n# Update API configuration\ndockvirt exec api-1 -- update-db-config db-secondary.prod.com\ndockvirt exec api-2 -- update-db-config db-secondary.prod.com\n\n# Health check\ncurl -f https://lb.prod.com/health || exit 1\n\necho \"✅ Failover completed successfully\"\n```
+```bash
+#!/bin/bash
+# failover.sh
+
+echo "🚨 Starting failover procedure..."
+
+# Promote secondary database
+dockvirt exec db-secondary -- promote-to-primary
+
+# Update API configuration
+dockvirt exec api-1 -- update-db-config db-secondary.prod.com
+dockvirt exec api-2 -- update-db-config db-secondary.prod.com
+
+# Health check
+curl -f https://lb.prod.com/health || exit 1
+
+echo "✅ Failover completed successfully"
+```
 
 ## 📋 Production Checklist
 
-### Pre-deployment\n- [ ] Load test completed (10k concurrent users)\n- [ ] Security scan passed\n- [ ] Database migrations tested\n- [ ] Backup strategy verified\n- [ ] Monitoring dashboards configured\n- [ ] SSL certificates valid\n- [ ] DNS records updated\n\n### Post-deployment\n- [ ] Health checks passing\n- [ ] Monitoring alerts configured  \n- [ ] Performance metrics baseline\n- [ ] Backup job scheduled\n- [ ] Team notifications sent\n- [ ] Documentation updated\n\n## 💰 Cost Optimization\n\n### Resource Planning\n\n| Component | VM Count | vCPU | RAM | Storage | Monthly Cost* |\n|-----------|----------|------|-----|---------|---------------|\n| Load Balancer | 1 | 2 | 4GB | 50GB | $45 |\n| Frontend | 3 | 2 | 2GB | 20GB | $90 |\n| API | 2 | 4 | 8GB | 50GB | $160 |\n| Database | 1 | 8 | 32GB | 1TB | $320 |\n| Cache | 1 | 4 | 8GB | 100GB | $95 |\n| Monitoring | 1 | 4 | 8GB | 200GB | $105 |\n| **Total** | **9** | **30** | **70GB** | **1.49TB** | **$815** |\n\n*Estimated costs for cloud VM equivalent\n\n### Cost Saving Tips\n\n1. **Scheduled scaling** - Reduce VM size during low traffic\n2. **Spot instances** - Use for non-critical workloads  \n3. **Storage optimization** - Use different storage tiers\n4. **Reserved capacity** - Long-term commitments for discounts
+### Pre-deployment
+- [ ] Load test completed (10k concurrent users)
+- [ ] Security scan passed
+- [ ] Database migrations tested
+- [ ] Backup strategy verified
+- [ ] Monitoring dashboards configured
+- [ ] SSL certificates valid
+- [ ] DNS records updated
+
+### Post-deployment
+- [ ] Health checks passing
+- [ ] Monitoring alerts configured  
+- [ ] Performance metrics baseline
+- [ ] Backup job scheduled
+- [ ] Team notifications sent
+- [ ] Documentation updated
+
+## 💰 Cost Optimization
+
+### Resource Planning
+
+| Component | VM Count | vCPU | RAM | Storage | Monthly Cost* |
+|-----------|----------|------|-----|---------|---------------|
+| Load Balancer | 1 | 2 | 4GB | 50GB | $45 |
+| Frontend | 3 | 2 | 2GB | 20GB | $90 |
+| API | 2 | 4 | 8GB | 50GB | $160 |
+| Database | 1 | 8 | 32GB | 1TB | $320 |
+| Cache | 1 | 4 | 8GB | 100GB | $95 |
+| Monitoring | 1 | 4 | 8GB | 200GB | $105 |
+| **Total** | **9** | **30** | **70GB** | **1.49TB** | **$815** |
+
+*Estimated costs for cloud VM equivalent
+
+### Cost Saving Tips
+
+1. **Scheduled scaling** - Reduce VM size during low traffic
+2. **Spot instances** - Use for non-critical workloads  
+3. **Storage optimization** - Use different storage tiers
+4. **Reserved capacity** - Long-term commitments for discounts
+
+## 🧪 Quick HTTP checks with Host header
+
+When verifying services by IP (before DNS is set up), include the Host header (Caddy/Reverse proxy):
+
+```bash
+curl -H 'Host: lb.prod.com' http://<lb_ip>/
+curl -H 'Host: app1.prod.com' http://<app1_ip>/
+curl -H 'Host: api1.prod.com' http://<api1_ip>/
+curl -H 'Host: mon.prod.com' http://<mon_ip>/
+```
+
+> Note: Do not run `dockvirt` or `make` with `sudo`. The tools request sudo only when needed and act on your real HOME.

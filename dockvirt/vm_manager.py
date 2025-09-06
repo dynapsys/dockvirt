@@ -84,7 +84,7 @@ def run(command):
     return result.stdout.strip()
 
 
-def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
+def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=None):
     logger.info(f"Creating VM: name={name}, domain={domain}, image={image}, port={port}, mem={mem}, disk={disk}, cpus={cpus}, os={os_name}")
     
     BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -217,13 +217,14 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     run(create_cmd)
 
     # Create VM using virt-install
+    net_spec = net or "network=default"
     virt_cmd = (
         f"virt-install --connect qemu:///system "
         f"--name {name} --ram {mem} --vcpus {cpus} "
         f"--disk path={disk_img},format=qcow2 "
         f"--disk path={cidata},device=cdrom "
         f"--os-variant {os_variant} "
-        f"--import --network network=default --noautoconsole --graphics none"
+        f"--import --network {net_spec} --noautoconsole --graphics none"
     )
     logger.info(f"Creating VM with virt-install: {name}")
     logger.debug(f"virt-install command: {virt_cmd}")

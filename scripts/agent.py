@@ -352,9 +352,16 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             )
             rc, out, err = run(cmd_up, cwd=ex, echo=verbose)
             if rc != 0:
-                report_lines.append(f"- ❌ up failed: {err.strip()}")
+                # Prefer stderr, fall back to stdout, and include cli.log tail for context
+                msg = (err or "").strip() or (out or "").strip() or "(no output)"
+                report_lines.append(f"- ❌ up failed: {msg}")
+                # Attach cli.log tail if available
+                cli_log = Path.home() / ".dockvirt" / "cli.log"
+                tail = _tail(cli_log, 120)
+                if tail:
+                    report_lines.append("  - cli.log tail:\n```text\n" + tail + "\n```")
                 click.echo(f"[agent] up failed for {vm_name}")
-                log_event("vm.up.error", {"name": vm_name, "error": err.strip()})
+                log_event("vm.up.error", {"name": vm_name, "error": msg})
                 continue
             report_lines.append("- ✅ up succeeded")
             click.echo(f"[agent] up succeeded for {vm_name}")

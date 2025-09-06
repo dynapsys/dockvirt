@@ -53,7 +53,16 @@ def main():
 @click.option("--mem", default="4096", help="RAM for the VM (MB)")
 @click.option("--disk", default="20", help="Disk size for the VM (GB)")
 @click.option("--cpus", default=2, help="Number of vCPUs")
-def up(name, domain, image, port, os_name, mem, disk, cpus):
+@click.option(
+    "--net",
+    "net",
+    default=None,
+    help=(
+        "virt-install network spec, e.g. 'network=default' (NAT) or 'bridge=br0' (LAN). "
+        "Defaults to project .dockvirt 'net' or 'network=default'."
+    ),
+)
+def up(name, domain, image, port, os_name, mem, disk, cpus, net):
     """Creates a VM in libvirt with dynadock + Caddy."""
     logger.info(f"Starting VM creation with parameters: name={name}, domain={domain}, image={image}, port={port}")
     config = load_config()
@@ -65,6 +74,7 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
     if port is None:
         port = int(project_config.get("port", 80))
     os_name = os_name or project_config.get("os") or config["default_os"]
+    net = net or project_config.get("net") or "network=default"
 
     # Check if required parameters are available after applying defaults
     if not name:
@@ -101,10 +111,24 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
         "os": os_name,
     })
     try:
-        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
-        ip = get_vm_ip(name)
-        append_event("vm.up.success", {"name": name, "ip": ip, "domain": domain})
-        click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
+        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net)
+        # Wait for IP assignment (dhcp leases)
+        ip = ""
+        for _ in range(60):  # up to ~120s
+            time.sleep(2)
+            ip = get_vm_ip(name)
+            if ip and ip != "unknown":
+                break
+        append_event("vm.up.success", {"name": name, "ip": ip or "unknown", "domain": domain})
+        if ip and ip != "unknown":
+            click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
+        else:
+            click.echo(
+                "✅ VM {} is running at http://{} (IP pending). "
+                "Use 'dockvirt ip --name {}' in a moment. If you need LAN IP, set --net bridge=br0.".format(
+                    name, domain, name
+                )
+            )
     except Exception as e:
         click.echo(f"❌ VM creation failed: {e}")
         # Provide hints
