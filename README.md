@@ -442,7 +442,7 @@ sudo apt install cloud-image-utils
 sudo dnf install cloud-utils
 ```
 
-### ❌ "Permission denied" when accessing libvirt
+### ❌ Permission denied when accessing libvirt
 ```bash
 # Add your user to the libvirt group
 sudo usermod -a -G libvirt $USER
@@ -451,6 +451,31 @@ newgrp libvirt
 # Restart the service
 sudo systemctl restart libvirtd
 ```
+
+### ❌ Permission denied writing ~/.dockvirt/*.qcow2 or cidata.iso (qemu:///system)
+
+When using the system libvirt (qemu:///system), VMs run as the `qemu` user and must be able to traverse your home and read VM files. On Fedora/SELinux you may also need proper labels.
+
+Fix (safe to apply):
+
+```bash
+# Allow qemu to traverse your home
+sudo setfacl -m u:qemu:x "$HOME"
+
+# Give qemu read access on dockvirt files
+sudo setfacl -R -m u:qemu:rx "$HOME/.dockvirt"
+sudo find "$HOME/.dockvirt" -type f -name '*.qcow2' -exec setfacl -m u:qemu:rw {} +
+sudo find "$HOME/.dockvirt" -type f -name '*.iso'   -exec setfacl -m u:qemu:r  {} +
+
+# SELinux labels (Fedora/SELinux)
+sudo semanage fcontext -a -t svirt_image_t "$HOME/.dockvirt(/.*)?" || true
+sudo restorecon -Rv "$HOME/.dockvirt"
+```
+
+Tips:
+
+- Always connect virsh to the system libvirt with: `virsh --connect qemu:///system <subcommand>`.
+- Alternatively, configure a libvirt storage pool (e.g. `/var/lib/libvirt/images/dockvirt`) and store VM files there to avoid ACLs on `$HOME`.
 
 ### ❌ KVM not available
 ```bash
@@ -471,6 +496,51 @@ netstat -an | findstr LISTENING
 dockvirt up --name app1 --domain app1.local --image nginx --port 80
 dockvirt up --name app2 --domain app2.local --image apache --port 80
 # Both run without conflicts!
+```
+
+## 🩺 Dockvirt Doctor & Dev venv (PEP 668)
+
+Use Dockvirt Doctor to diagnose and optionally fix environment issues. This is especially helpful on Homebrew Python (PEP 668 externally-managed environments).
+
+```bash
+# Quick diagnostics
+make doctor
+python3 scripts/doctor.py --summary
+
+# Detailed logging + file log
+python3 scripts/doctor.py --verbose --log-file ~/.dockvirt/doctor.log
+
+# Auto-fix common issues (may require sudo and re-login for groups)
+make doctor-fix
+```
+
+### Development install with a virtualenv (PEP 668 friendly)
+
+```bash
+# Use your preferred Python (example shows 3.13)
+PY=$(command -v python3.13 || command -v python3)
+
+# Create a venv that can access system packages (e.g. python3-libvirt)
+$PY -m venv --system-site-packages .venv-3.13
+source .venv-3.13/bin/activate
+
+# Install the project without forcing libvirt-python from pip
+pip install -U pip setuptools wheel
+pip install -e . --no-deps
+pip install jinja2 click pyyaml
+
+# Verify and diagnose
+python -m dockvirt.cli --help
+python3 scripts/doctor.py --summary
+```
+
+### Ensure libvirt default network is active
+
+```bash
+sudo systemctl enable --now libvirtd
+sudo virsh net-define /usr/share/libvirt/networks/default.xml || true
+sudo virsh net-start default || true
+sudo virsh net-autostart default
 ```
 
 ## 💾 Generating Images and Packages

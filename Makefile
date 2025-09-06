@@ -1,6 +1,6 @@
 # Makefile for dockvirt
 
-.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs
+.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor
 
 help:
 	@echo "Available commands:"
@@ -11,6 +11,7 @@ help:
 	@echo "  test-commands   - Test all CLI commands from documentation"
 	@echo "  test-examples   - Test all examples on different systems"
 	@echo "  check           - Check system dependencies"
+	@echo "  doctor          - Diagnose and optionally fix environment issues"
 	@echo "  lint            - Check code with linters (flake8, black)"
 	@echo "  format          - Format code (black, isort)"
 	@echo "  docs            - Build documentation"
@@ -127,6 +128,15 @@ test-commands: install
 docs:
 	@echo "📚 Building documentation..."
 	@echo "Documentation is in README.md and examples/"
+
+# Doctor (diagnostics and optional fixes)
+doctor:
+	@echo "🩺 Running Dockvirt Doctor..."
+	python3 scripts/doctor.py
+
+doctor-fix:
+	@echo "🩺 Running Dockvirt Doctor with auto-fix..."
+	python3 scripts/doctor.py --fix --yes
 
 # Repair and validate all commands
 repair: install

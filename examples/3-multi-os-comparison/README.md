@@ -18,9 +18,6 @@ This example shows a simple HTML page that will be automatically built inside th
 ```bash
 cd examples/3-multi-os-comparison
 
-# First, build the Docker image
-docker build -t multi-os-demo:latest .
-
 dockvirt up \
   --name ubuntu-test \
   --domain ubuntu-test.local \
@@ -32,7 +29,10 @@ dockvirt up \
 
 ```bash
 cd examples/3-multi-os-comparison
-# Use the same image built above
+# Build happens inside the VM automatically.
+# Optional (not required): pre-build on host
+# docker build -t multi-os-demo:latest .
+
 dockvirt up \
   --name fedora-test \
   --domain fedora-test.local \

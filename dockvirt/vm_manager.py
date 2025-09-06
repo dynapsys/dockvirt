@@ -1,5 +1,7 @@
 import subprocess
 import logging
+import json
+import re
 from pathlib import Path
 from jinja2 import Template
 
@@ -132,8 +134,14 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
     # Get the operating system image
     logger.debug(f"Getting base image for OS: {os_name}")
     base_image = get_image_path(os_name, config)
-    os_variant = config["images"][os_name]["variant"]
-    logger.info(f"Using base image: {base_image} (variant: {os_variant})")
+
+    # Support both "images" and "os_images" config keys
+    images_key = "os_images" if "os_images" in config else "images"
+    os_variant = config[images_key][os_name]["variant"]
+
+    logger.info(
+        f"Using base image: {base_image} (variant: {os_variant})"
+    )
 
     # Render cloud-init config (user-data)
     logger.debug("Rendering cloud-init template")
@@ -163,8 +171,29 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
 
     # Create VM disk from base image
     disk_img = vm_dir / f"{name}.qcow2"
-    logger.info(f"Creating VM disk: {disk_img} ({disk}GB)")
-    run(f"qemu-img create -f qcow2 -b {base_image} {disk_img} {disk}G")
+    logger.info(
+        f"Creating VM disk: {disk_img} ({disk}GB)"
+    )
+
+    # Detect backing file format to avoid: "Backing file specified without backing format"
+    base_format = "qcow2"
+    try:
+        info_cmd = "qemu-img info --output=json \"%s\"" % base_image
+        info_json = run(info_cmd)
+        base_format = json.loads(info_json).get("format", "qcow2")
+        logger.debug("Detected base image format: %s", base_format)
+    except Exception as e:
+        logger.warning(
+            "Could not detect base image format, defaulting to qcow2: %s",
+            e,
+        )
+
+    # Create overlay disk referencing the base image
+    create_cmd = (
+        "qemu-img create -f qcow2 -F %s -b \"%s\" \"%s\" %sG"
+        % (base_format, base_image, disk_img, disk)
+    )
+    run(create_cmd)
 
     # Create VM using virt-install
     virt_cmd = (
@@ -190,11 +219,34 @@ def destroy_vm(name):
 def get_vm_ip(name):
     """Get the IP address of a running VM."""
     # Requires libvirt + dnsmasq to be installed
+    # Prefer system libvirt (qemu:///system)
+    # 1) Try domifaddr from DHCP lease source
     try:
-        leases = run("virsh net-dhcp-leases default")
-        for line in leases.splitlines():
-            if name in line:
-                return line.split()[4].split("/")[0]
-        return "unknown"
+        out = run(
+            f"virsh --connect qemu:///system domifaddr {name} --source lease --full"
+        )
+        for line in out.splitlines():
+            m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})/\d+", line)
+            if m:
+                return m.group(1)
     except Exception:
-        return "unknown"
+        pass
+
+    # 2) Fallback: get MAC from domain XML, then search net-dhcp-leases
+    try:
+        xml = run(f"virsh --connect qemu:///system dumpxml {name}")
+        mac_match = re.search(r"<mac address='([0-9A-Fa-f:]+)'", xml)
+        if mac_match:
+            mac = mac_match.group(1).lower()
+            leases = run(
+                "virsh --connect qemu:///system net-dhcp-leases default"
+            )
+            for line in leases.splitlines():
+                if mac in line.lower():
+                    m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})/\d+", line)
+                    if m:
+                        return m.group(1)
+    except Exception:
+        pass
+
+    return "unknown"
