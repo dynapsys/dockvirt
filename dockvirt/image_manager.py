@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from urllib.parse import urlparse
 
@@ -6,26 +7,62 @@ from .config import IMAGES_DIR
 
 
 def download_image(url, filename):
-    """Downloads an image from the given URL and saves it to the images directory."""
+    """Downloads an image from the given URL and saves it to the images directory.
+
+    Robust behavior:
+    - Retries with sensible timeouts
+    - Falls back to alternate Fedora mirror domain if primary fails
+    - Uses curl if available, otherwise wget
+    """
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     image_path = IMAGES_DIR / filename
 
-    if image_path.exists():
+    if image_path.exists() and image_path.stat().st_size > 0:
         print(f"Image {filename} already exists, skipping download.")
         return str(image_path)
 
-    print(f"Downloading image from {url}...")
-    try:
-        subprocess.run(
-            ["wget", "-O", str(image_path), url],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print(f"✅ Image {filename} downloaded successfully.")
-        return str(image_path)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Error downloading image: {e.stderr}")
+    # Build candidate URL list (fallback to dl.fedoraproject.org for Fedora images)
+    urls = [url]
+    if "download.fedoraproject.org" in url:
+        alt = url.replace("download.fedoraproject.org", "dl.fedoraproject.org")
+        if alt != url:
+            urls.append(alt)
+
+    last_err = ""
+    for u in urls:
+        print(f"Downloading image from {u}...")
+        for attempt in range(1, 4):
+            try:
+                if shutil.which("curl"):
+                    cmd = [
+                        "curl", "-L", "--fail",
+                        "--retry", "5", "--retry-all-errors",
+                        "--connect-timeout", "10", "--max-time", "600",
+                        "-o", str(image_path), u,
+                    ]
+                else:
+                    cmd = [
+                        "wget", "-t", "5", "--waitretry=5", "--read-timeout=60",
+                        "-O", str(image_path), u,
+                    ]
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                if image_path.exists() and image_path.stat().st_size > 0:
+                    print(f"✅ Image {filename} downloaded successfully.")
+                    return str(image_path)
+                else:
+                    last_err = "zero-size file after download"
+            except subprocess.CalledProcessError as e:
+                last_err = e.stderr or e.stdout or str(e)
+                # Clean partial file and retry
+                try:
+                    if image_path.exists():
+                        image_path.unlink()
+                except FileNotFoundError:
+                    pass
+                print(f"Retry {attempt}/3 failed: {last_err}")
+        # Next URL fallback
+
+    raise RuntimeError(f"Error downloading image: {last_err}")
 
 
 def get_image_path(os_name, config):

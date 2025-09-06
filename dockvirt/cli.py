@@ -7,10 +7,12 @@ from .system_check import check_system_dependencies, auto_install_dependencies
 from .image_generator import generate_bootable_image
 from .self_heal import (
     run_heal,
+    preflight_network,
     unify_images_mapping,
     on_exception_hints,
     ensure_cli_log_file,
 )
+from .logdb import append_event
 
 # Configure logging
 logging.basicConfig(
@@ -86,9 +88,22 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
     except Exception:
         pass
 
+    # Self-heal: ensure default libvirt network is active
+    try:
+        net_res = preflight_network()
+        for note in net_res.notes:
+            logger.info("Network check: %s", note)
+    except Exception:
+        pass
+
+    append_event("vm.up.start", {
+        "name": name, "domain": domain, "image": image, "port": port,
+        "os": os_name,
+    })
     try:
         create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
         ip = get_vm_ip(name)
+        append_event("vm.up.success", {"name": name, "ip": ip, "domain": domain})
         click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
     except Exception as e:
         click.echo(f"❌ VM creation failed: {e}")
@@ -96,6 +111,7 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
         hints = on_exception_hints(str(e), name).notes
         for h in hints:
             click.echo(f"💡 {h}")
+        append_event("vm.up.error", {"name": name, "error": str(e), "hints": hints})
         sys.exit(1)
 
 
@@ -150,6 +166,7 @@ def heal_command(apply: bool, auto_hosts: bool):
             notes.extend(["images:"] + res.notes)
     except Exception:
         pass
+    append_event("heal.run", {"apply": apply, "auto_hosts": auto_hosts, "notes": notes})
     click.echo("\n".join(["🔧 Heal summary:"] + [f" - {n}" for n in notes]))
 
 

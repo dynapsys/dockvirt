@@ -265,7 +265,7 @@ graph TD
 
 ```yaml
 default_os: ubuntu22.04
-os_images:
+images:
   ubuntu22.04:
     name: ubuntu22.04
     url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
@@ -273,8 +273,10 @@ os_images:
   fedora38:
     name: fedora38
     url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
-    variant: fedora-cloud-base-38
+    variant: fedora38
 ```
+
+Note: The key `os_images` is also accepted for backward compatibility. The CLI merges both `images` and `os_images` automatically.
 
 ### Project Configuration (.dockvirt file)
 
@@ -357,6 +359,12 @@ After creating the VM, `dockvirt` will display its IP address. Add it to your `/
 
 ```
 <ip_address> my-app.local
+```
+
+Tip: If you use a reverse proxy (Caddy) inside the VM, IP-based checks may require a Host header. You can verify with:
+
+```bash
+curl -H 'Host: my-app.local' http://<ip_address>/
 ```
 
 The `.dockvirt` file has priority over the default parameters, but CLI parameters override everything.
@@ -481,6 +489,20 @@ Tips:
 - Always connect virsh to the system libvirt with: `virsh --connect qemu:///system <subcommand>`.
 - Alternatively, configure a libvirt storage pool (e.g. `/var/lib/libvirt/images/dockvirt`) and store VM files there to avoid ACLs on `$HOME`.
 
+### ❌ qemu-img "Failed to get write lock"
+
+This usually happens after an interrupted run that left a domain or disk around. Fix:
+
+```bash
+# Tear down the VM if it exists
+dockvirt down --name <vm_name>
+
+# Or auto-heal common leftovers
+make heal
+```
+
+Then try `dockvirt up` again.
+
 ### ❌ KVM not available
 ```bash
 # Check if virtualization is enabled in your BIOS
@@ -518,6 +540,8 @@ python3 scripts/doctor.py --verbose --log-file ~/.dockvirt/doctor.log
 make doctor-fix
 ```
 
+Avoid running `make ...` with `sudo`. Doctor already detects `SUDO_USER` and acts on your real home (`/home/<user>`), but invoking make with sudo may lead to confusing paths and permissions.
+
 ### Development install with a virtualenv (PEP 668 friendly)
 
 ```bash
@@ -547,6 +571,8 @@ sudo virsh net-start default || true
 sudo virsh net-autostart default
 ```
 
+Tip: The CLI runs a preflight network check and will print hints if the `default` network is missing or inactive.
+
 ## 🤖 Automation Agent
 
 Use the built-in Automation Agent to validate your setup end-to-end, including domain reachability. It can optionally apply safe fixes (ACL/SELinux for qemu:///system and /etc/hosts entries) using sudo.
@@ -568,6 +594,17 @@ $PY scripts/agent.py run --os ubuntu22.04 --os fedora38 --skip-host-build
 # Report location
 cat agent_report.md
 ```
+
+Optional local LLM remediation: you can enable a small local model (via Ollama) to propose and apply safe fixes automatically.
+
+```bash
+export DOCKVIRT_USE_LLM=1
+# Optional model selection (default: llama3.2:3b)
+export DOCKVIRT_LLM_MODEL=llama3.2:3b
+make agent-fix
+```
+
+Note: Do not run `sudo make agent-fix`. The agent will request sudo where needed and stream commands in the console.
 
 What it does:
 
@@ -649,6 +686,18 @@ image=nginx:latest
 ## 🛠️ Development
 
 The repository contains a `Makefile` to facilitate the development process. See the [CONTRIBUTING.md](./CONTRIBUTING.md) file to learn how to contribute to the project's development.
+
+If you're developing locally inside this repository, prefer using the project virtualenv to avoid conflicts with system or Homebrew installations:
+
+```bash
+make install
+.
+venv-3.13/bin/dockvirt --help
+
+# If your PATH resolves to another dockvirt (e.g., Homebrew), use the venv binary explicitly:
+which dockvirt
+./.venv-3.13/bin/dockvirt up
+```
 
 ## ✍️ Author
 

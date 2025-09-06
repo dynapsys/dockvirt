@@ -145,11 +145,11 @@ docs:
 # Automation Agent
 agent:
 	@echo "🤖 Running Dockvirt Automation Agent (summary mode)..."
-	$(PY) scripts/agent.py run
+	$(PY) scripts/agent.py run --verbose
 
 agent-fix:
 	@echo "🤖 Running Dockvirt Automation Agent with auto-fix (sudo may be required)..."
-	$(PY) scripts/agent.py run --auto-fix --auto-hosts --skip-host-build
+	$(PY) scripts/agent.py run --auto-fix --auto-hosts --skip-host-build --verbose
 
 heal:
 	@echo "🛠️ Running self-heal..."

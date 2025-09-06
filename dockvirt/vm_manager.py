@@ -73,6 +73,13 @@ def run(command):
                 "  sudo restorecon -Rv \"$HOME/.dockvirt\"\n"
             )
         else:
+            if "network 'default' is not active" in result.stderr.lower():
+                raise RuntimeError(
+                    "Default libvirt network is inactive.\n"
+                    "Run: sudo virsh net-define /usr/share/libvirt/networks/default.xml && "
+                    "sudo virsh net-start default && sudo virsh net-autostart default\n"
+                    "Then retry: dockvirt heal; dockvirt up"
+                )
             raise RuntimeError(f"Command failed: {result.stderr}")
     return result.stdout.strip()
 
@@ -211,10 +218,11 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config):
 
     # Create VM using virt-install
     virt_cmd = (
-        f"virt-install --name {name} --ram {mem} --vcpus {cpus} "
+        f"virt-install --connect qemu:///system "
+        f"--name {name} --ram {mem} --vcpus {cpus} "
         f"--disk path={disk_img},format=qcow2 "
         f"--disk path={cidata},device=cdrom "
-        f"--os-type linux --os-variant {os_variant} "
+        f"--os-variant {os_variant} "
         f"--import --network network=default --noautoconsole --graphics none"
     )
     logger.info(f"Creating VM with virt-install: {name}")

@@ -37,12 +37,35 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+import pwd
+import getpass
 from typing import List, Tuple
 
-# Constants
+# Constants and target context (handle sudo safely)
 REPO_ROOT = Path(__file__).resolve().parents[1]
-HOME = Path.home()
-CONFIG_DIR = HOME / ".dockvirt"
+
+def _resolve_target_user_home() -> tuple[str, Path]:
+    sudo_user = os.environ.get("SUDO_USER", "")
+    if sudo_user and sudo_user != "root":
+        try:
+            return sudo_user, Path(pwd.getpwnam(sudo_user).pw_dir)
+        except Exception:
+            pass
+    # Fallback to current process user
+    user = os.environ.get("USER") or os.environ.get("LOGNAME") or ""
+    if not user:
+        try:
+            user = getpass.getuser()
+        except Exception:
+            user = "unknown"
+    try:
+        home = Path(pwd.getpwnam(user).pw_dir)
+    except Exception:
+        home = Path.home()
+    return user, home
+
+TARGET_USER, TARGET_HOME = _resolve_target_user_home()
+CONFIG_DIR = TARGET_HOME / ".dockvirt"
 IMAGES_DIR = CONFIG_DIR / "images"
 GLOBAL_CONFIG = CONFIG_DIR / "config.yaml"
 
@@ -211,14 +234,10 @@ def check_home_dir_permissions() -> List[Finding]:
     out: List[Finding] = []
     try:
         if CONFIG_DIR.exists():
-            import getpass
-            import pwd
-
-            user = getpass.getuser()
-            uid = pwd.getpwnam(user).pw_uid
+            uid = pwd.getpwnam(TARGET_USER).pw_uid
             st = CONFIG_DIR.stat()
             if st.st_uid != uid:
-                fix = f"sudo chown -R $USER:$USER {CONFIG_DIR}"
+                fix = f"sudo chown -R {TARGET_USER}:{TARGET_USER} {CONFIG_DIR}"
                 out.append(Finding(False, "~/.dockvirt ownership", "owned by another user", fix=fix))
             else:
                 out.append(Finding(True, "~/.dockvirt ownership", "correct"))
@@ -283,15 +302,15 @@ def check_services() -> List[Finding]:
 
 def check_groups_and_kvm() -> List[Finding]:
     out: List[Finding] = []
-    rc, groups, _ = run("groups")
+    rc, groups, _ = run(f"id -nG {TARGET_USER}")
     groups = groups or ""
     for g in ["libvirt", "kvm", "docker"]:
         if g in groups.split():
             out.append(Finding(True, f"group:{g}", "present"))
         else:
-            fix = f"sudo usermod -aG {g} $USER && echo 'Relogin required'"
+            fix = f"sudo usermod -aG {g} {TARGET_USER} && echo 'Relogin required'"
             out.append(Finding(False, f"group:{g}", "missing", fix=fix))
-            logger.warning("Missing group '%s'; fix: %s", g, fix)
+            logger.warning("Missing group '%s' for %s; fix: %s", g, TARGET_USER, fix)
 
     if Path("/dev/kvm").exists():
         out.append(Finding(True, "/dev/kvm", "exists"))
@@ -305,7 +324,7 @@ def check_groups_and_kvm() -> List[Finding]:
 
 def check_config_and_project() -> List[Finding]:
     out: List[Finding] = []
-    # Global config
+    # Global config (for TARGET_USER)
     if GLOBAL_CONFIG.exists():
         out.append(Finding(True, "global config", str(GLOBAL_CONFIG)))
     else:
@@ -455,6 +474,8 @@ def main() -> None:
     print("🔍 Dockvirt Doctor")
     print("=" * 60)
     print(f"OS: {os_id} {os_ver}{' (WSL)' if wsl else ''}")
+    # Show target context (handles sudo safely)
+    print(f"Acting on behalf of user: {TARGET_USER} (HOME={TARGET_HOME})")
 
     f_py = [python_info()]
     f_dock = dockvirt_binding()

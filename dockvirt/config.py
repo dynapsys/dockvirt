@@ -23,7 +23,7 @@ DEFAULT_CONFIG = {
             'url': ('https://download.fedoraproject.org/pub/fedora/linux/'
                     'releases/38/Cloud/x86_64/images/'
                     'Fedora-Cloud-Base-38-1.6.x86_64.qcow2'),
-            'variant': 'fedora-cloud-base-38'
+            'variant': 'fedora38'
         },
     },
 }
@@ -117,7 +117,7 @@ def get_merged_config():
             'url': ('https://download.fedoraproject.org/pub/fedora/linux/'
                     'releases/38/Cloud/x86_64/images/'
                     'Fedora-Cloud-Base-38-1.6.x86_64.qcow2'),
-            'variant': 'fedora-cloud-base-38'
+            'variant': 'fedora38'
         },
     }
     for k, v in defaults.items():

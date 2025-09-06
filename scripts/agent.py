@@ -38,14 +38,32 @@ DEFAULT_REPORT = REPO_ROOT / "agent_report.md"
 DEFAULT_LIBVIRT_URI = os.environ.get("LIBVIRT_DEFAULT_URI", "qemu:///system")
 
 
-def run(cmd: str, cwd: Optional[Path] = None, env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+def run(
+    cmd: str,
+    cwd: Optional[Path] = None,
+    env: Optional[Dict[str, str]] = None,
+    echo: bool = False,
+) -> Tuple[int, str, str]:
     e = os.environ.copy()
     if env:
         e.update(env)
     if "LIBVIRT_DEFAULT_URI" not in e:
         e["LIBVIRT_DEFAULT_URI"] = DEFAULT_LIBVIRT_URI
-    p = subprocess.run(cmd, shell=True, cwd=str(cwd) if cwd else None,
-                       capture_output=True, text=True, env=e)
+    if echo:
+        print(f"$ {cmd}")
+    p = subprocess.run(
+        cmd,
+        shell=True,
+        cwd=str(cwd) if cwd else None,
+        capture_output=True,
+        text=True,
+        env=e,
+    )
+    if echo and (p.stdout or p.stderr):
+        if p.stdout:
+            print(p.stdout, end="")
+        if p.stderr:
+            print(p.stderr, end="")
     return p.returncode, p.stdout, p.stderr
 
 
@@ -65,26 +83,46 @@ def parse_dockvirt(example_dir: Path) -> Dict[str, str]:
     except Exception:
         pass
     return cfg
+# Allow importing dockvirt source and scripts helpers
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+if str(REPO_ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+try:  # Structured event logging (JSONL)
+    from dockvirt.logdb import append_event as log_event  # type: ignore
+except Exception:  # fallback no-op
+    def log_event(event_type: str, data: Dict[str, str]) -> None:  # type: ignore
+        return
+
+try:  # Local LLM helper (ollama)
+    from llm_helper import available as llm_available, suggest_fixes  # type: ignore
+except Exception:
+    def llm_available() -> bool:  # type: ignore
+        return False
+
+    def suggest_fixes(context: str, max_tokens: int = 256):  # type: ignore
+        return []
 
 
-def ensure_libvirt_default_network() -> List[str]:
+def ensure_libvirt_default_network(verbose: bool = False) -> List[str]:
     notes = []
-    rc, out, err = run("virsh --connect qemu:///system net-info default")
+    rc, out, err = run("virsh --connect qemu:///system net-info default", echo=verbose)
     if rc != 0:
         # Try define+start+autostart
         notes.append("default network missing; attempting define/start/autostart")
-        run("sudo systemctl enable --now libvirtd")
-        run("sudo virsh net-define /usr/share/libvirt/networks/default.xml || true")
-        run("sudo virsh net-start default || true")
-        run("sudo virsh net-autostart default || true")
+        run("sudo systemctl enable --now libvirtd", echo=verbose)
+        run("sudo virsh net-define /usr/share/libvirt/networks/default.xml || true", echo=verbose)
+        run("sudo virsh net-start default || true", echo=verbose)
+        run("sudo virsh net-autostart default || true", echo=verbose)
     else:
         if "Active: yes" not in out:
-            run("sudo virsh net-start default || true")
-            run("sudo virsh net-autostart default || true")
+            run("sudo virsh net-start default || true", echo=verbose)
+            run("sudo virsh net-autostart default || true", echo=verbose)
     return notes
 
 
-def fix_acl_selinux(home: Path) -> List[str]:
+def fix_acl_selinux(home: Path, verbose: bool = False) -> List[str]:
     notes = []
     # ACLs for qemu traversal and file access
     cmds = [
@@ -94,7 +132,7 @@ def fix_acl_selinux(home: Path) -> List[str]:
         f"sudo find {home}/.dockvirt -type f -name '*.iso' -exec setfacl -m u:qemu:r {{}} +",
     ]
     for c in cmds:
-        run(c)
+        run(c, echo=verbose)
     # SELinux labels (Fedora/SELinux): label only image files
     selinux_cmds = [
         f"sudo semanage fcontext -a -t svirt_image_t '{home}/.dockvirt(/.*)?\\.qcow2' || true",
@@ -102,16 +140,16 @@ def fix_acl_selinux(home: Path) -> List[str]:
         f"sudo restorecon -Rv '{home}/.dockvirt' || true",
     ]
     for c in selinux_cmds:
-        run(c)
+        run(c, echo=verbose)
     notes.append("Applied ACL and SELinux label fixes for ~/.dockvirt images")
     return notes
 
 
-def fix_ownership(home: Path) -> List[str]:
+def fix_ownership(home: Path, verbose: bool = False) -> List[str]:
     """Ensure ~/.dockvirt belongs to the current user to avoid write errors."""
     notes: List[str] = []
     cmd = f"sudo chown -R $USER:$USER '{home}/.dockvirt' || true"
-    run(cmd)
+    run(cmd, echo=verbose)
     notes.append("Ownership of ~/.dockvirt corrected (if needed)")
     return notes
 
@@ -144,7 +182,10 @@ def get_vm_ip(name: str) -> str:
 
 def http_check(url: str, timeout: int = 15, host: str | None = None) -> Tuple[bool, int]:
     header = f"-H 'Host: {host}'" if host else ""
-    rc, out, err = run(f"curl -s -o /dev/null -w '%{{http_code}}' {header} {url}")
+    # Add connect/read timeouts and follow redirects
+    rc, out, err = run(
+        f"curl -sS -L --connect-timeout 5 --max-time 10 -o /dev/null -w '%{{http_code}}' {header} {url}"
+    )
     if rc == 0:
         try:
             code = int(out.strip())
@@ -154,7 +195,7 @@ def http_check(url: str, timeout: int = 15, host: str | None = None) -> Tuple[bo
     return False, 0
 
 
-def wait_http(url: str, seconds: int = 120, interval: int = 5, host: str | None = None) -> Tuple[bool, int]:
+def wait_http(url: str, seconds: int = 300, interval: int = 5, host: str | None = None) -> Tuple[bool, int]:
     """Poll HTTP until 200 or timeout."""
     elapsed = 0
     while elapsed < seconds:
@@ -173,6 +214,64 @@ def ensure_domain_hosts(ip: str, domain: str) -> bool:
     return rc == 0
 
 
+def _tail(path: Path, n: int = 200) -> str:
+    try:
+        if not path.exists():
+            return ""
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        return "\n".join(lines[-n:])
+    except Exception:
+        return ""
+
+
+def collect_context(report_lines: List[str]) -> str:
+    """Collect context from report, cli.log and logdb events."""
+    home = Path.home()
+    cli_log = home / ".dockvirt" / "cli.log"
+    events = home / ".dockvirt" / "logdb" / "events.jsonl"
+    ctx = []
+    ctx.append("# Agent report tail\n" + "\n".join(report_lines[-200:]))
+    t1 = _tail(cli_log, 200)
+    if t1:
+        ctx.append("# cli.log tail\n" + t1)
+    t2 = _tail(events, 200)
+    if t2:
+        ctx.append("# events.jsonl tail\n" + t2)
+    ctx.append(f"LIBVIRT_DEFAULT_URI={os.environ.get('LIBVIRT_DEFAULT_URI', DEFAULT_LIBVIRT_URI)}")
+    return "\n\n".join(ctx)
+
+
+ALLOWED_PREFIXES = (
+    "sudo virsh net-define ",
+    "sudo virsh net-start default",
+    "sudo virsh net-autostart default",
+    "sudo systemctl enable --now libvirtd",
+    "sudo setfacl ",
+    "sudo semanage fcontext ",
+    "sudo restorecon -Rv ",
+    "sudo chown -R $USER:$USER ",
+)
+
+
+def apply_llm_suggestions(context: str, verbose: bool) -> List[str]:
+    """Query local LLM and apply only whitelisted, non-destructive suggestions."""
+    if not llm_available():
+        return []
+    cmds = suggest_fixes(context)
+    if not cmds:
+        return []
+    applied: List[str] = []
+    for c in cmds:
+        if any(c.startswith(pfx) for pfx in ALLOWED_PREFIXES):
+            rc, out, err = run(c, echo=verbose)
+            ok = rc == 0
+            applied.append(f"{'✅' if ok else '❌'} {c}")
+            log_event("agent.llm.apply", {"cmd": c, "rc": str(rc)})
+        else:
+            applied.append(f"⏭️ skipped (not in whitelist): {c}")
+    return applied
+
+
 @click.group()
 def cli():
     pass
@@ -186,8 +285,9 @@ def cli():
               help="OS variants to test (can be repeated)")
 @click.option("--example", "example_names", multiple=True, default=[], help="Specific examples to test")
 @click.option("--report-file", default=str(DEFAULT_REPORT), help="Where to write the markdown report")
+@click.option("--verbose", is_flag=True, help="Print progress and command outputs while running")
 def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: List[str],
-              example_names: List[str], report_file: str):
+              example_names: List[str], report_file: str, verbose: bool):
     """Run the Dockvirt automation agent."""
     report_lines: List[str] = []
     report_lines.append("# Dockvirt Automation Agent Report")
@@ -197,19 +297,25 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
     py = sys.executable
     report_lines.append(f"Python: {py}")
     report_lines.append(f"LIBVIRT_DEFAULT_URI: {os.environ.get('LIBVIRT_DEFAULT_URI', DEFAULT_LIBVIRT_URI)}")
+    log_event("agent.start", {"auto_fix": str(auto_fix), "auto_hosts": str(auto_hosts)})
 
     # Doctor
     if auto_fix:
         report_lines.append("\n## Doctor (auto-fix)")
-        run(f"{py} scripts/doctor.py --fix --yes")
+        click.echo("[agent] Running doctor --fix --yes...")
+        run(f"{py} scripts/doctor.py --fix --yes", echo=verbose)
         # Fix ownership early to prevent cloud-localds write errors
-        report_lines.extend(f"- {n}" for n in fix_ownership(Path.home()))
-        ensure_libvirt_default_network()
-        fix_acl_selinux(Path.home())
+        report_lines.extend(f"- {n}" for n in fix_ownership(Path.home(), verbose=verbose))
+        click.echo("[agent] Ensuring default libvirt network...")
+        ensure_libvirt_default_network(verbose=verbose)
+        click.echo("[agent] Applying ACL/SELinux fixes (if needed)...")
+        fix_acl_selinux(Path.home(), verbose=verbose)
     else:
         report_lines.append("\n## Doctor (summary)")
-        run(f"{py} scripts/doctor.py --summary")
-        ensure_libvirt_default_network()
+        click.echo("[agent] Running doctor (summary)...")
+        run(f"{py} scripts/doctor.py --summary", echo=verbose)
+        click.echo("[agent] Ensuring default libvirt network...")
+        ensure_libvirt_default_network(verbose=verbose)
 
     # Examples to test
     examples: List[Path]
@@ -232,20 +338,27 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
         for os_variant in os_list:
             vm_name = f"{name}-{os_variant}"
             report_lines.append(f"\n### OS: {os_variant}")
+            click.echo(f"[agent] Example {ex.name} -> OS {os_variant}: starting up...")
+            # Pre-teardown to avoid leftover locks from previous interrupted runs
+            run(f"{py} -m dockvirt.cli down --name {vm_name}", echo=verbose)
             # Skip host build if requested
             if not skip_host_build and (ex / "Dockerfile").exists() and shutil.which("docker"):
-                run("docker build -t %s ." % image, cwd=ex)
+                run("docker build -t %s ." % image, cwd=ex, echo=verbose)
 
             # Up
             cmd_up = (
                 f"{py} -m dockvirt.cli up --name {vm_name} --domain {domain} "
                 f"--image {image} --port {port} --os {os_variant}"
             )
-            rc, out, err = run(cmd_up, cwd=ex)
+            rc, out, err = run(cmd_up, cwd=ex, echo=verbose)
             if rc != 0:
                 report_lines.append(f"- ❌ up failed: {err.strip()}")
+                click.echo(f"[agent] up failed for {vm_name}")
+                log_event("vm.up.error", {"name": vm_name, "error": err.strip()})
                 continue
             report_lines.append("- ✅ up succeeded")
+            click.echo(f"[agent] up succeeded for {vm_name}")
+            log_event("vm.up.success", {"name": vm_name})
 
             # Wait and get IP
             ip = ""
@@ -256,7 +369,13 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
                     break
             if not ip:
                 report_lines.append("- ❌ No IP (domifaddr/leases) after 90s")
-                run(f"{py} -m dockvirt.cli down --name {vm_name}")
+                click.echo(f"[agent] Tearing down {vm_name}...")
+                run(f"{py} -m dockvirt.cli down --name {vm_name}", echo=verbose)
+                ctx = collect_context(report_lines)
+                llm_notes = apply_llm_suggestions(ctx, verbose=verbose)
+                if llm_notes:
+                    report_lines.append("\n## LLM remediation")
+                    report_lines.extend(f"- {n}" for n in llm_notes)
                 continue
             report_lines.append(f"- 🌐 IP: {ip}")
 
@@ -269,7 +388,7 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
                 report_lines.append(f"- ⚠️ HTTP by IP failed ({code_ip}): {ip_url}")
 
             # Domain resolve
-            rc, dns_out, _ = run(f"getent hosts {domain}")
+            rc, dns_out, _ = run(f"getent hosts {domain}", echo=verbose)
             if rc == 0 and dns_out.strip():
                 report_lines.append(f"- 🧭 Domain resolves: {domain}")
             else:
@@ -292,6 +411,12 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             run(f"{py} -m dockvirt.cli down --name {vm_name}")
 
     # Write report
+    # Optional: LLM remediation pass
+    ctx = collect_context(report_lines)
+    llm_notes = apply_llm_suggestions(ctx, verbose=verbose)
+    if llm_notes:
+        report_lines.append("\n## LLM remediation")
+        report_lines.extend(f"- {n}" for n in llm_notes)
     Path(report_file).write_text("\n".join(report_lines), encoding="utf-8")
     click.echo(f"Report saved to {report_file}")
 

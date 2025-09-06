@@ -43,20 +43,21 @@ write_files:
           curl -fsSL https://get.docker.com -o get-docker.sh
           sh get-docker.sh
           usermod -aG docker {{ remote_user }}
+          systemctl enable --now docker || true
       fi
       
       # Wait for Docker to be ready
       sleep 10
       
-      # Build Docker image if Dockerfile exists
+      # Build Docker image if Dockerfile exists (use sudo to avoid group delay)
       {% if dockerfile_content %}
       echo "Building Docker image..."
-      docker build -t {{ app_image }} .
+      sudo -E docker build -t {{ app_image }} .
       {% endif %}
       
-      # Start containers
+      # Start containers (use sudo to avoid group delay)
       echo "Starting containers..."
-      docker compose up -d
+      sudo -E docker compose up -d
       
       echo "✅ Application deployed successfully!"
     permissions: '0755'
