@@ -30,10 +30,13 @@ def download_image(url, filename):
 
 def get_image_path(os_name, config):
     """Returns the path to the OS image, downloading it if it doesn't exist."""
-    if os_name not in config["images"]:
+    # Support both "images" and "os_images" keys for backward compatibility
+    images_key = "os_images" if "os_images" in config else "images"
+    
+    if os_name not in config.get(images_key, {}):
         raise ValueError(f"Unknown operating system: {os_name}")
 
-    image_config = config["images"][os_name]
+    image_config = config[images_key][os_name]
     url = image_config["url"]
 
     # Extract filename from URL
