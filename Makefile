@@ -1,23 +1,27 @@
 # Makefile for dockvirt
 
-.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system
+.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs
 
 help:
 	@echo "Available commands:"
-	@echo "  install         - Installs production and development dependencies"
+	@echo "  install         - Install production and development dependencies"
 	@echo "  dev-setup       - Full setup of the development environment"
-	@echo "  build           - Builds the Python package"
-	@echo "  test-e2e        - Runs end-to-end tests"
-	@echo "  lint            - Checks the code with a linter (flake8, black)"
-	@echo "  format          - Formats the code (black, isort)"
-	@echo "  version-show    - Shows the current version"
-	@echo "  version-patch   - Bumps the patch version (0.1.0 -> 0.1.1)"
-	@echo "  version-minor   - Bumps the minor version (0.1.0 -> 0.2.0)"
-	@echo "  version-major   - Bumps the major version (0.1.0 -> 1.0.0)"
-	@echo "  publish         - Automatically bumps the patch version and publishes to PyPI"
-	@echo "  clean           - Removes build artifacts and temporary files"
-	@echo "  install-system  - Installs system dependencies (Docker, libvirt)"
-	@echo "  test-examples   - Tests all examples on different systems"
+	@echo "  build           - Build the Python package"
+	@echo "  test-e2e        - Run end-to-end tests"
+	@echo "  test-commands   - Test all CLI commands from documentation"
+	@echo "  test-examples   - Test all examples on different systems"
+	@echo "  check           - Check system dependencies"
+	@echo "  lint            - Check code with linters (flake8, black)"
+	@echo "  format          - Format code (black, isort)"
+	@echo "  docs            - Build documentation"
+	@echo "  version-show    - Show current version"
+	@echo "  version-patch   - Bump patch version (0.1.0 -> 0.1.1)"
+	@echo "  version-minor   - Bump minor version (0.1.0 -> 0.2.0)"
+	@echo "  version-major   - Bump major version (0.1.0 -> 1.0.0)"
+	@echo "  publish         - Bump patch version and publish to PyPI"
+	@echo "  clean           - Remove build artifacts and temporary files"
+	@echo "  install-system  - Install system dependencies (Docker, libvirt)"
+	@echo "  repair          - Run comprehensive command validation"
 
 install:
 	pip install -e .[dev]
@@ -108,7 +112,31 @@ test-examples: install
 	@echo "🧪 Testing all examples..."
 	python3 scripts/test_examples.py
 
-repair: install
-	@echo "🔧 Repairing commands from READMEs..."
+# System dependency check
+check:
+	@echo "🔍 Checking system dependencies..."
+	@python3 -c "from dockvirt.system_check import check_system_dependencies; check_system_dependencies()"
+
+# Test all commands from documentation
+test-commands: install
+	@echo "🧪 Testing all dockvirt commands..."
 	python3 scripts/test_commands_robust.py
-	@echo "✅ Testing complete - check test_results.md"
+	@echo "✅ Command testing complete - check test_results.md"
+
+# Build documentation
+docs:
+	@echo "📚 Building documentation..."
+	@echo "Documentation is in README.md and examples/"
+
+# Repair and validate all commands
+repair: install
+	@echo "🔧 Validating all commands from documentation..."
+	python3 scripts/test_commands_robust.py
+	@echo "✅ Validation complete - check test_results.md"
+
+# Quick development test
+test-quick: install
+	@echo "🎯 Running quick tests..."
+	dockvirt --help > /dev/null && echo "✅ CLI works"
+	dockvirt check || echo "⚠️  Some dependencies missing"
+	@echo "✅ Quick test complete"

@@ -60,24 +60,83 @@ dockvirt up --name db --domain db.local --image postgres:latest --port 5432
 
 ## 🔧 Requirements
 
-*   A Linux operating system with KVM support.
-*   Installed packages: `qemu-kvm`, `libvirt-daemon-system`, `virt-manager`, `cloud-image-utils`.
-*   A cloud image (`.qcow2`) for your chosen distribution (e.g., Ubuntu 22.04, Fedora Cloud Base).
+### System Requirements
+*   A Linux operating system with KVM support (or WSL2 on Windows)
+*   Python 3.8 or higher
+*   At least 8GB RAM (for running VMs)
+*   20GB+ free disk space
+
+### Required System Packages
+
+#### Ubuntu/Debian:
+```bash
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
+                     cloud-image-utils virt-install docker.io wget
+```
+
+#### Fedora/CentOS/RHEL:
+```bash
+sudo dnf install -y qemu-kvm libvirt libvirt-client virt-install \
+                     cloud-utils docker wget
+```
+
+#### Arch Linux:
+```bash
+sudo pacman -S qemu-full libvirt virt-install bridge-utils \
+                cloud-image-utils docker wget
+```
+
+### Post-Installation Setup
+```bash
+# Start and enable libvirt service
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
+
+# Add user to required groups
+sudo usermod -aG libvirt $USER
+sudo usermod -aG docker $USER
+
+# Log out and back in for group changes to take effect
+```
 
 ## 📦 Installation
 
-### 🐧 Linux (Native)
+### Quick Install (Automated)
 
-1.  **Install from PyPI** (recommended):
+We provide an installation script that handles all dependencies:
+
+```bash
+# Download and run the installer
+curl -sSL https://raw.githubusercontent.com/dynapsys/dockvirt/main/scripts/install.sh | bash
+
+# Or clone and install manually
+git clone https://github.com/dynapsys/dockvirt.git
+cd dockvirt
+sudo ./scripts/install.sh
+```
+
+### Manual Installation
+
+#### 🐧 Linux (Native)
+
+1.  **Install system dependencies** (see Requirements section above)
+
+2.  **Install from PyPI** (recommended):
     ```bash
     pip install dockvirt
     ```
 
-2.  **Or install from the repository** (for developers):
+3.  **Or install from the repository** (for developers):
     ```bash
     git clone https://github.com/dynapsys/dockvirt.git
     cd dockvirt
-    make install
+    pip install -e .
+    ```
+
+4.  **Verify installation**:
+    ```bash
+    dockvirt check  # Check system dependencies
+    dockvirt --help # Show available commands
     ```
 
 ### 🪟 Windows (WSL2)
@@ -95,9 +154,15 @@ dockvirt up --name db --domain db.local --image postgres:latest --port 5432
     # Update the system
     sudo apt update && sudo apt upgrade -y
     
-    # Install KVM/QEMU and libvirt
-    sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
-    sudo apt install -y cloud-image-utils  # for cloud-localds
+    # Install all required dependencies
+    sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
+                         cloud-image-utils virt-install docker.io wget
+    
+    # Configure services
+    sudo systemctl start libvirtd
+    sudo systemctl enable libvirtd
+    sudo usermod -aG libvirt $USER
+    sudo usermod -aG docker $USER
     
     # Add your user to the required groups
     sudo usermod -a -G libvirt,kvm $USER
@@ -186,17 +251,47 @@ graph TD
 
 ## ⚙️ Configuration
 
+### Configuration Hierarchy
+
+`dockvirt` uses a layered configuration system:
+
+1. **Global config** (`~/.dockvirt/config.yaml`) - System-wide defaults
+2. **Project config** (`.dockvirt` file) - Project-specific defaults
+3. **CLI parameters** - Override any defaults
+
+### Global Configuration
+
 `dockvirt` automatically creates a configuration file at `~/.dockvirt/config.yaml` on its first run:
 
 ```yaml
 default_os: ubuntu22.04
-images:
+os_images:
   ubuntu22.04:
+    name: ubuntu22.04
     url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
     variant: ubuntu22.04
   fedora38:
+    name: fedora38
     url: https://download.fedoraproject.org/pub/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-38-1.6.x86_64.qcow2
     variant: fedora-cloud-base-38
+```
+
+### Project Configuration (.dockvirt file)
+
+Create a `.dockvirt` file in your project directory:
+
+```ini
+# VM Configuration
+name=my-project
+domain=my-project.local
+image=nginx:latest
+port=80
+os=ubuntu22.04
+
+# Resource Allocation (optional)
+mem=4096    # RAM in MB
+disk=20     # Disk in GB
+cpus=2      # Number of vCPUs
 ```
 
 ## 🖥️ Usage
@@ -228,6 +323,9 @@ domain=my-app.local
 image=my-app:latest
 port=80
 os=ubuntu22.04
+mem=4096
+disk=20
+cpus=2
 EOF
 
 # Now, just run (in the directory with the Dockerfile):
