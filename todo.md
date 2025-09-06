@@ -85,6 +85,12 @@
 - Robust test automation integrated into Makefile
 - All import and module loading issues resolved
 - ✅ Added Automation Agent (`scripts/agent.py`) and Make targets: `agent`, `agent-fix`
+- ✅ Added Self-Healing module (`dockvirt/self_heal.py`) and CLI command: `dockvirt heal`
+- ✅ Added CLI file logging to `~/.dockvirt/cli.log` (see `setup_cli_logging()` in `dockvirt/cli.py`)
+- ✅ Unification of `images`/`os_images` mapping in `dockvirt/config.py` (fixes Unknown OS)
+- ✅ Permission denied remediation hints in `dockvirt/vm_manager.py` (ACL/SELinux)
+- ✅ SDLC orchestrator `scripts/sdlc.py` and Make targets: `sdlc-quick`, `sdlc-full`
+- ✅ Permission helper script: `scripts/fix_permissions.py` (dry-run or apply)
 
 ## 🔧 Development Priorities
 
@@ -122,6 +128,9 @@
 **Code Enhancement Tasks:**
 - [ ] Fix linting errors in `scripts/test_examples.py`
 - [ ] Fix linting errors (E501 line length) in `scripts/agent.py`
+- [ ] Fix linting errors (E501 line length) in `dockvirt/self_heal.py`
+- [ ] Fix linting errors (E501 line length) in `dockvirt/config.py`
+- [ ] Fix linting errors (E501 line length) in `dockvirt/vm_manager.py`
 - [ ] Add comprehensive unit tests for core modules
 - [ ] Implement proper error handling with custom exceptions
 - [ ] Add CLI debug mode (`--verbose` flag)
@@ -213,6 +222,9 @@ make repair  # Runs comprehensive command validation
 ```bash
 # ✅ Validated: Domain reachability checks (examples tests)
 # Tests now verify DNS + HTTP via domains from .dockvirt and give actionable tips
+# ✅ `dockvirt heal` added – runs self-healing routines (default network, images map, logging)
+# ✅ `scripts/fix_permissions.py --apply` – applies ACL/SELinux fixes for ~/.dockvirt
+# ✅ Agent improved: waits for HTTP readiness and sends Host header to Caddy
 
 # ✅ WORKING: Testing and validation
 make repair                    # Command validation works

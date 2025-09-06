@@ -5,6 +5,12 @@ from .vm_manager import create_vm, destroy_vm, get_vm_ip
 from .config import load_config, load_project_config
 from .system_check import check_system_dependencies, auto_install_dependencies
 from .image_generator import generate_bootable_image
+from .self_heal import (
+    run_heal,
+    unify_images_mapping,
+    on_exception_hints,
+    ensure_cli_log_file,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -14,9 +20,24 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def setup_cli_logging() -> None:
+    """Ensure CLI logs are also written to ~/.dockvirt/cli.log."""
+    try:
+        log_file = ensure_cli_log_file()
+        has_file = any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+        if not has_file:
+            fh = logging.FileHandler(log_file)
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+            logger.addHandler(fh)
+    except Exception:
+        pass
+
+
 @click.group()
 def main():
     """Run dynadock apps in isolated libvirt/KVM VMs."""
+    setup_cli_logging()
 
 
 @main.command()
@@ -57,9 +78,25 @@ def up(name, domain, image, port, os_name, mem, disk, cpus):
                    "Provide --image or create a .dockvirt file with image=...")
         return
 
-    create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
-    ip = get_vm_ip(name)
-    click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
+    # Self-heal: unify images mapping to avoid Unknown OS issues
+    try:
+        res = unify_images_mapping(config)
+        if res.changed:
+            logger.info("Self-heal: %s", "; ".join(res.notes))
+    except Exception:
+        pass
+
+    try:
+        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config)
+        ip = get_vm_ip(name)
+        click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
+    except Exception as e:
+        click.echo(f"❌ VM creation failed: {e}")
+        # Provide hints
+        hints = on_exception_hints(str(e), name).notes
+        for h in hints:
+            click.echo(f"💡 {h}")
+        sys.exit(1)
 
 
 @main.command()
@@ -96,6 +133,24 @@ def setup_system(install):
             sys.exit(1)
     else:
         check_system_dependencies()
+
+
+@main.command(name="heal")
+@click.option("--apply", is_flag=True, help="Attempt non-destructive auto-remediation (may print sudo steps)")
+@click.option("--auto-hosts", is_flag=True, help="Allow adding /etc/hosts entries (requires sudo)")
+def heal_command(apply: bool, auto_hosts: bool):
+    """Runs self-healing routines (default network, images map, guidance)."""
+    setup_cli_logging()
+    notes = run_heal(apply=apply, auto_hosts=auto_hosts)
+    # Also unify images mapping proactively
+    try:
+        config = load_config()
+        res = unify_images_mapping(config)
+        if res.changed:
+            notes.extend(["images:"] + res.notes)
+    except Exception:
+        pass
+    click.echo("\n".join(["🔧 Heal summary:"] + [f" - {n}" for n in notes]))
 
 
 @main.command(name="ip")

@@ -28,6 +28,7 @@ you will be asked to confirm unless --yes is used.
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import logging
 import platform
@@ -203,6 +204,40 @@ def check_commands() -> List[Finding]:
             finding = Finding(False, f"{c}", "Not found", fix=fix)
             out.append(finding)
             logger.warning("Missing command: %s (fix: %s)", c, fix or "n/a")
+    return out
+
+
+def check_home_dir_permissions() -> List[Finding]:
+    out: List[Finding] = []
+    try:
+        if CONFIG_DIR.exists():
+            import getpass
+            import pwd
+
+            user = getpass.getuser()
+            uid = pwd.getpwnam(user).pw_uid
+            st = CONFIG_DIR.stat()
+            if st.st_uid != uid:
+                fix = f"sudo chown -R $USER:$USER {CONFIG_DIR}"
+                out.append(Finding(False, "~/.dockvirt ownership", "owned by another user", fix=fix))
+            else:
+                out.append(Finding(True, "~/.dockvirt ownership", "correct"))
+        else:
+            out.append(Finding(True, "~/.dockvirt dir", "will be created on first run"))
+    except Exception as e:
+        out.append(Finding(False, "~/.dockvirt check failed", str(e)))
+    return out
+
+
+def check_environment_settings() -> List[Finding]:
+    out: List[Finding] = []
+    uri = os.environ.get("LIBVIRT_DEFAULT_URI", "")
+    if uri:
+        ok = uri == "qemu:///system"
+        fix = None if ok else "export LIBVIRT_DEFAULT_URI=qemu:///system"
+        out.append(Finding(ok, "LIBVIRT_DEFAULT_URI", uri, fix=fix))
+    else:
+        out.append(Finding(False, "LIBVIRT_DEFAULT_URI", "not set", fix="export LIBVIRT_DEFAULT_URI=qemu:///system"))
     return out
 
 
@@ -427,6 +462,8 @@ def main() -> None:
     f_svc = check_services()
     f_grp = check_groups_and_kvm()
     f_cfg = check_config_and_project()
+    f_perm = check_home_dir_permissions()
+    f_env = check_environment_settings()
 
     summary = args.summary
     print_findings("Python & Dockvirt binding", f_py + f_dock, summary)
@@ -434,8 +471,10 @@ def main() -> None:
     print_findings("Services & networks", f_svc, summary)
     print_findings("Groups & KVM", f_grp, summary)
     print_findings("Config & Project", f_cfg, summary)
+    print_findings("Directory ownership", f_perm, summary)
+    print_findings("Environment", f_env, summary)
 
-    all_findings = f_py + f_dock + f_cmds + f_svc + f_grp + f_cfg
+    all_findings = f_py + f_dock + f_cmds + f_svc + f_grp + f_cfg + f_perm + f_env
 
     # Optional JSON output
     if args.json:
@@ -445,6 +484,8 @@ def main() -> None:
             ("Services & networks", f_svc),
             ("Groups & KVM", f_grp),
             ("Config & Project", f_cfg),
+            ("Directory ownership", f_perm),
+            ("Environment", f_env),
         ]
         print(findings_to_json(sections))
         return

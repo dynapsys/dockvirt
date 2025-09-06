@@ -1,5 +1,7 @@
 .idea
 venv*
+agent_report.md
+command_test_results.md
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

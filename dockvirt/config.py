@@ -88,5 +88,47 @@ def get_merged_config():
     else:
         logger.debug("No project config to merge")
 
-    logger.info(f"Final config: OS={merged_config.get('default_os', 'unknown')}, {len(merged_config.get('images', {}))} OS images available")
+    # Unify legacy keys: support both 'images' and 'os_images' by merging into one mapping
+    images_map = {}
+    try:
+        if isinstance(global_config.get('images'), dict):
+            images_map.update(global_config.get('images', {}))
+        if isinstance(global_config.get('os_images'), dict):
+            # Do not clobber existing entries from 'images'
+            for k, v in global_config.get('os_images', {}).items():
+                images_map.setdefault(k, v)
+        if isinstance(project_config.get('images') if project_config else None, dict):
+            images_map.update(project_config.get('images', {}))
+        if isinstance(project_config.get('os_images') if project_config else None, dict):
+            for k, v in project_config.get('os_images', {}).items():
+                images_map.setdefault(k, v)
+    except Exception:
+        # Fallback: keep whatever was there
+        pass
+
+    # Ensure baseline known defaults exist even if user's config.yaml was older
+    defaults = {
+        'ubuntu22.04': {
+            'url': ('https://cloud-images.ubuntu.com/jammy/current/'
+                    'jammy-server-cloudimg-amd64.img'),
+            'variant': 'ubuntu22.04'
+        },
+        'fedora38': {
+            'url': ('https://download.fedoraproject.org/pub/fedora/linux/'
+                    'releases/38/Cloud/x86_64/images/'
+                    'Fedora-Cloud-Base-38-1.6.x86_64.qcow2'),
+            'variant': 'fedora-cloud-base-38'
+        },
+    }
+    for k, v in defaults.items():
+        images_map.setdefault(k, v)
+
+    if images_map:
+        merged_config['images'] = images_map
+        # Also keep 'os_images' in sync for backward compatibility
+        merged_config['os_images'] = images_map
+
+    logger.info(
+        f"Final config: OS={merged_config.get('default_os', 'unknown')}, {len(merged_config.get('images', {}))} OS images available"
+    )
     return merged_config

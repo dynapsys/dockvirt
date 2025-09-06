@@ -107,6 +107,15 @@ def fix_acl_selinux(home: Path) -> List[str]:
     return notes
 
 
+def fix_ownership(home: Path) -> List[str]:
+    """Ensure ~/.dockvirt belongs to the current user to avoid write errors."""
+    notes: List[str] = []
+    cmd = f"sudo chown -R $USER:$USER '{home}/.dockvirt' || true"
+    run(cmd)
+    notes.append("Ownership of ~/.dockvirt corrected (if needed)")
+    return notes
+
+
 def get_vm_ip(name: str) -> str:
     # Try domifaddr (lease source)
     rc, out, _ = run(f"virsh --connect qemu:///system domifaddr {name} --source lease --full")
@@ -133,8 +142,9 @@ def get_vm_ip(name: str) -> str:
     return ""
 
 
-def http_check(url: str, timeout: int = 15) -> Tuple[bool, int]:
-    rc, out, err = run(f"curl -s -o /dev/null -w '%{{http_code}}' {url}")
+def http_check(url: str, timeout: int = 15, host: str | None = None) -> Tuple[bool, int]:
+    header = f"-H 'Host: {host}'" if host else ""
+    rc, out, err = run(f"curl -s -o /dev/null -w '%{{http_code}}' {header} {url}")
     if rc == 0:
         try:
             code = int(out.strip())
@@ -142,6 +152,18 @@ def http_check(url: str, timeout: int = 15) -> Tuple[bool, int]:
         except ValueError:
             return False, 0
     return False, 0
+
+
+def wait_http(url: str, seconds: int = 120, interval: int = 5, host: str | None = None) -> Tuple[bool, int]:
+    """Poll HTTP until 200 or timeout."""
+    elapsed = 0
+    while elapsed < seconds:
+        ok, code = http_check(url, host=host)
+        if ok:
+            return True, code
+        time.sleep(interval)
+        elapsed += interval
+    return False, code if 'code' in locals() else 0
 
 
 def ensure_domain_hosts(ip: str, domain: str) -> bool:
@@ -180,6 +202,8 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
     if auto_fix:
         report_lines.append("\n## Doctor (auto-fix)")
         run(f"{py} scripts/doctor.py --fix --yes")
+        # Fix ownership early to prevent cloud-localds write errors
+        report_lines.extend(f"- {n}" for n in fix_ownership(Path.home()))
         ensure_libvirt_default_network()
         fix_acl_selinux(Path.home())
     else:
@@ -238,7 +262,7 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
 
             # HTTP by IP
             ip_url = f"http://{ip}/" if port == "80" else f"http://{ip}:{port}/"
-            ok_ip, code_ip = http_check(ip_url)
+            ok_ip, code_ip = wait_http(ip_url, seconds=120, interval=5, host=domain)
             if ok_ip:
                 report_lines.append(f"- ✅ HTTP by IP OK: {ip_url}")
             else:
@@ -258,7 +282,7 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
 
             # HTTP by domain
             dom_url = f"http://{domain}/" if port == "80" else f"http://{domain}:{port}/"
-            ok_dom, code_dom = http_check(dom_url)
+            ok_dom, code_dom = wait_http(dom_url, seconds=120, interval=5)
             if ok_dom:
                 report_lines.append(f"- ✅ HTTP via domain OK: {dom_url}")
             else:

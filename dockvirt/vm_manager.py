@@ -58,6 +58,20 @@ def run(command):
                 "  Fedora/CentOS: sudo dnf install -y qemu-img\n"
                 "Then run: dockvirt check"
             )
+        elif "Permission denied" in result.stderr and (".dockvirt" in result.stderr or "cidata.iso" in result.stderr or ".qcow2" in result.stderr):
+            raise RuntimeError(
+                "Permission denied writing VM files under ~/.dockvirt.\n"
+                "When using system libvirt (qemu:///system), apply ACLs and SELinux labels so the 'qemu' user can access your home.\n\n"
+                "Run the following commands (safe to apply):\n"
+                "  sudo setfacl -m u:qemu:x \"$HOME\"\n"
+                "  sudo setfacl -R -m u:qemu:rx \"$HOME/.dockvirt\"\n"
+                "  sudo find \"$HOME/.dockvirt\" -type f -name '*.qcow2' -exec setfacl -m u:qemu:rw {} +\n"
+                "  sudo find \"$HOME/.dockvirt\" -type f -name '*.iso' -exec setfacl -m u:qemu:r {} +\n\n"
+                "If SELinux is enabled (Fedora/RHEL):\n"
+                "  sudo semanage fcontext -a -t svirt_image_t \"$HOME/.dockvirt(/.*)?\\.qcow2\"\n"
+                "  sudo semanage fcontext -a -t svirt_image_t \"$HOME/.dockvirt(/.*)?\\.iso\"\n"
+                "  sudo restorecon -Rv \"$HOME/.dockvirt\"\n"
+            )
         else:
             raise RuntimeError(f"Command failed: {result.stderr}")
     return result.stdout.strip()

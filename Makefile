@@ -26,6 +26,9 @@ help:
 	@echo "  doctor          - Diagnose and optionally fix environment issues"
 	@echo "  agent           - Run automation agent (no sudo changes)"
 	@echo "  agent-fix       - Run automation agent with auto-fix and /etc/hosts updates"
+	@echo "  heal            - Run dockvirt self-heal routines"
+	@echo "  sdlc-quick      - Run quick SDLC (doctor summary + command tests)"
+	@echo "  sdlc-full       - Run full SDLC (doctor fix, lint, tests, build)"
 	@echo "  lint            - Check code with linters (flake8, black)"
 	@echo "  format          - Format code (black, isort)"
 	@echo "  docs            - Build documentation"
@@ -147,6 +150,18 @@ agent:
 agent-fix:
 	@echo "🤖 Running Dockvirt Automation Agent with auto-fix (sudo may be required)..."
 	$(PY) scripts/agent.py run --auto-fix --auto-hosts --skip-host-build
+
+heal:
+	@echo "🛠️ Running self-heal..."
+	$(PY) -m dockvirt.cli heal --apply
+
+sdlc-quick:
+	@echo "🚀 Running quick SDLC pipeline..."
+	$(PY) scripts/sdlc.py quick
+
+sdlc-full:
+	@echo "🏗️ Running full SDLC pipeline (may take a while)..."
+	$(PY) scripts/sdlc.py full --fix --skip-host-build
 
 # Doctor (diagnostics and optional fixes)
 doctor:
