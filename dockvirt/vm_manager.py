@@ -84,7 +84,7 @@ def run(command):
     return result.stdout.strip()
 
 
-def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=None):
+def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=None, https=False):
     logger.info(f"Creating VM: name={name}, domain={domain}, image={image}, port={port}, mem={mem}, disk={disk}, cpus={cpus}, os={os_name}")
     
     BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -95,21 +95,40 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
     templates_dir = Path(__file__).parent / "templates"
     logger.debug(f"Using templates from: {templates_dir}")
 
-    # Render Caddyfile
-    logger.debug("Rendering Caddyfile template")
-    caddyfile_template = (templates_dir / "Caddyfile.j2").read_text()
-    caddyfile_content = Template(caddyfile_template).render(
-        domain=domain, app_name=name, app_port=port
-    )
+    # Select templates based on HTTPS mode
+    if https:
+        logger.debug("Using HTTPS templates")
+        caddyfile_template_path = templates_dir / "Caddyfile-https.json.j2"
+        docker_compose_template_path = templates_dir / "docker-compose-https.yml.j2"
+        caddyfile_filename = "Caddyfile-https.json"
+    else:
+        logger.debug("Using HTTP templates")
+        caddyfile_template_path = templates_dir / "Caddyfile.j2"
+        docker_compose_template_path = templates_dir / "docker-compose.yml.j2"
+        caddyfile_filename = "Caddyfile"
+
+    # Render Caddyfile/Caddy JSON
+    logger.debug(f"Rendering {caddyfile_filename} template")
+    caddyfile_template = caddyfile_template_path.read_text()
+    
+    if https:
+        # For HTTPS, use the JSON config as-is (already configured for all domains)
+        caddyfile_content = caddyfile_template
+    else:
+        # For HTTP, render the traditional Caddyfile
+        caddyfile_content = Template(caddyfile_template).render(
+            domain=domain, app_name=name, app_port=port
+        )
     logger.debug(f"Caddyfile rendered for domain {domain}, port {port}")
 
     # Render docker-compose.yml
     logger.debug("Rendering docker-compose.yml template")
-    docker_compose_template_path = templates_dir / "docker-compose.yml.j2"
     docker_compose_template = docker_compose_template_path.read_text()
 
     docker_compose_content = Template(docker_compose_template).render(
-        app_name=name, app_image=image
+        image_name=name, 
+        ports=[port] if not https else [],
+        home_dir=str(Path.home())
     )
     logger.debug(f"Docker compose rendered for app {name} with image {image}")
 

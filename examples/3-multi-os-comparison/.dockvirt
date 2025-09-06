@@ -2,8 +2,8 @@
 # Pokazuje możliwość łatwego przełączania między Ubuntu a Fedorą
 
 name=multi-os-demo
-domain=multi-os-demo.local
-image=multi-os-demo:latest
+domain=frontend.dockvirt.dev
+image=simple-website
 port=80
 # Domyślnie Ubuntu 22.04, ale można łatwo zmienić:
 # os=ubuntu22.04

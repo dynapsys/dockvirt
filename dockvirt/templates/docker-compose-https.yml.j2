@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  app:
+    image: {{ image_name }}:latest
+    restart: unless-stopped
+    networks:
+      - app-network
+    {% if ports %}
+    ports:
+      {% for port in ports %}
+      - "{{ port }}:{{ port }}"
+      {% endfor %}
+    {% endif %}
+    
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile-https.json:/etc/caddy/caddy.json:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - {{ home_dir }}/.dockvirt/certs:/certs:ro
+    networks:
+      - app-network
+    command: ["caddy", "run", "--config", "/etc/caddy/caddy.json"]
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

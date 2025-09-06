@@ -63,7 +63,13 @@ def main():
         "Defaults to project .dockvirt 'net' or 'network=default'."
     ),
 )
-def up(name, domain, image, port, os_name, mem, disk, cpus, net):
+@click.option(
+    "--https",
+    is_flag=True,
+    default=False,
+    help="Enable HTTPS with SSL certificates. Requires full domain name (e.g., app.dockvirt.dev)"
+)
+def up(name, domain, image, port, os_name, mem, disk, cpus, net, https):
     """Creates a VM in libvirt with dynadock + Caddy."""
     logger.info(f"Starting VM creation with parameters: name={name}, domain={domain}, image={image}, port={port}")
     config = load_config()
@@ -112,7 +118,7 @@ def up(name, domain, image, port, os_name, mem, disk, cpus, net):
         "os": os_name,
     })
     try:
-        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net)
+        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net, https)
         # Wait for IP assignment (dhcp leases)
         ip = ""
         for _ in range(60):  # up to ~120s
@@ -122,14 +128,15 @@ def up(name, domain, image, port, os_name, mem, disk, cpus, net):
                 break
         append_event("vm.up.success", {"name": name, "ip": ip or "unknown", "domain": domain})
         if ip and ip != "unknown":
-            click.echo(f"✅ VM {name} is running at http://{domain} ({ip})")
+            protocol = "https" if https else "http"
+            click.echo(f"✅ VM {name} is running at {protocol}://{domain} ({ip})")
+            if https:
+                click.echo(f"🔐 HTTPS enabled with self-signed certificates")
+                click.echo(f"📋 Trust CA certificate: ~/.dockvirt/certs/ca/ca-cert.pem")
+            click.echo(f"To destroy this VM, run: dockvirt down --name {name}")
         else:
-            click.echo(
-                "✅ VM {} is running at http://{} (IP pending). "
-                "Use 'dockvirt ip --name {}' in a moment. If you need LAN IP, set --net bridge=br0.".format(
-                    name, domain, name
-                )
-            )
+            click.echo(f"⚠️ VM {name} created but IP not found. Check with: dockvirt ip {name}")
+            click.echo(f"To destroy this VM, run: dockvirt down --name {name}")
     except Exception as e:
         click.echo(f"❌ VM creation failed: {e}")
         # Provide hints

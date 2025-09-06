@@ -1,0 +1,163 @@
+{
+  "admin": {
+    "disabled": true
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":80",
+            ":443"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "static-site.dockvirt.dev"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 301,
+                  "headers": {
+                    "Location": [
+                      "https://static-site.dockvirt.dev"
+                    ]
+                  }
+                }
+              ],
+              "terminal": true
+            },
+            {
+              "match": [
+                {
+                  "host": [
+                    "static-site.dockvirt.dev"
+                  ],
+                  "protocol": "https"
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [
+                    {
+                      "dial": "localhost:80"
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            },
+            {
+              "match": [
+                {
+                  "host": [
+                    "flask-app.dockvirt.dev"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 301,
+                  "headers": {
+                    "Location": [
+                      "https://flask-app.dockvirt.dev"
+                    ]
+                  }
+                }
+              ],
+              "terminal": true
+            },
+            {
+              "match": [
+                {
+                  "host": [
+                    "flask-app.dockvirt.dev"
+                  ],
+                  "protocol": "https"
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [
+                    {
+                      "dial": "localhost:5000"
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            },
+            {
+              "match": [
+                {
+                  "host": [
+                    "frontend.dockvirt.dev"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 301,
+                  "headers": {
+                    "Location": [
+                      "https://frontend.dockvirt.dev"
+                    ]
+                  }
+                }
+              ],
+              "terminal": true
+            },
+            {
+              "match": [
+                {
+                  "host": [
+                    "frontend.dockvirt.dev"
+                  ],
+                  "protocol": "https"
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [
+                    {
+                      "dial": "localhost:80"
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    },
+    "tls": {
+      "certificates": {
+        "load_files": [
+          {
+            "certificate": "/home/tom/.dockvirt/certs/domains/static-site-cert.pem",
+            "key": "/home/tom/.dockvirt/certs/domains/static-site-key.pem"
+          },
+          {
+            "certificate": "/home/tom/.dockvirt/certs/domains/flask-app-cert.pem",
+            "key": "/home/tom/.dockvirt/certs/domains/flask-app-key.pem"
+          },
+          {
+            "certificate": "/home/tom/.dockvirt/certs/domains/frontend-cert.pem",
+            "key": "/home/tom/.dockvirt/certs/domains/frontend-key.pem"
+          }
+        ]
+      }
+    }
+  }
+}
