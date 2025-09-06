@@ -243,6 +243,20 @@ def get_vm_ip(name):
     """Get the IP address of a running VM."""
     # Requires libvirt + dnsmasq to be installed
     # Prefer system libvirt (qemu:///system)
+    
+    # 0) Try direct DHCP lease lookup (most reliable method)
+    try:
+        out = run(
+            "virsh --connect qemu:///system net-dhcp-leases default"
+        )
+        for line in out.splitlines():
+            if name in line:
+                m = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})/\d+", line)
+                if m:
+                    return m.group(1)
+    except Exception:
+        pass
+    
     # 1) Try domifaddr from DHCP lease source
     try:
         out = run(
