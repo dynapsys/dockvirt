@@ -27,16 +27,16 @@ build:
 
 test-e2e:
 	@if [ -z "$${DOCKVIRT_TEST_IMAGE}" ]; then \
-		echo "Błąd: Zmienna środowiskowa DOCKVIRT_TEST_IMAGE nie jest ustawiona."; \
+		echo "Error: Environment variable DOCKVIRT_TEST_IMAGE is not set."; \
 		exit 1; \
 	fi
 	@if [ -z "$${DOCKVIRT_TEST_OS_VARIANT}" ]; then \
-		echo "Błąd: Zmienna środowiskowa DOCKVIRT_TEST_OS_VARIANT nie jest ustawiona."; \
+		echo "Error: Environment variable DOCKVIRT_TEST_OS_VARIANT is not set."; \
 		exit 1; \
 	fi
 	pytest -v tests/test_e2e.py
 
-# Wersjonowanie
+# Versioning
 version-show:
 	@python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
 
@@ -44,27 +44,27 @@ version-patch:
 	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$major.$$minor.$$((patch + 1))"; \
-	echo "Zwiększam wersję z $$current_version na $$new_version"; \
+	echo "Bumping version from $$current_version to $$new_version"; \
 	sed -i "s/version = \"$$current_version\"/version = \"$$new_version\"/" pyproject.toml; \
-	echo "✅ Wersja zaktualizowana na $$new_version"
+	echo "✅ Version updated to $$new_version"
 
 version-minor:
 	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$major.$$((minor + 1)).0"; \
-	echo "Zwiększam wersję z $$current_version na $$new_version"; \
+	echo "Bumping version from $$current_version to $$new_version"; \
 	sed -i "s/version = \"$$current_version\"/version = \"$$new_version\"/" pyproject.toml; \
-	echo "✅ Wersja zaktualizowana na $$new_version"
+	echo "✅ Version updated to $$new_version"
 
 version-major:
 	@current_version=$$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"); \
 	IFS='.' read -r major minor patch <<< "$$current_version"; \
 	new_version="$$((major + 1)).0.0"; \
-	echo "Zwiększam wersję z $$current_version na $$new_version"; \
+	echo "Bumping version from $$current_version to $$new_version"; \
 	sed -i "s/version = \"$$current_version\"/version = \"$$new_version\"/" pyproject.toml; \
 	echo "✅ Version updated to $$new_version"
 
-# Additional development tools
+# Development tools
 dev-setup: install
 	@echo "🔧 Setting up the development environment..."
 	pip install flake8 black isort

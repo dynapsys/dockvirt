@@ -7,18 +7,57 @@ from .image_manager import get_image_path
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 BASE_DIR = Path.home() / ".dockvirt"
 
 
-def run(cmd):
-    logger.info(f"Executing command: {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+def run(command):
+    """Execute a shell command."""
+    logger.debug(f"Executing command: {command}")
+    result = subprocess.run(
+        command, shell=True, capture_output=True, text=True
+    )
+    logger.debug(f"Command exit code: {result.returncode}")
+    if result.stdout:
+        logger.debug(f"Command stdout: {result.stdout}")
+    if result.stderr:
+        logger.debug(f"Command stderr: {result.stderr}")
+    
     if result.returncode != 0:
-        logger.error(f"Command failed with exit code {result.returncode}: {result.stderr}")
-        raise RuntimeError(f"Error: {result.stderr}")
-    logger.debug(f"Command output: {result.stdout.strip()}")
+        # Check for common missing dependencies and provide helpful messages
+        if "cloud-localds: command not found" in result.stderr:
+            raise RuntimeError(
+                "Missing dependency: cloud-localds command not found.\n"
+                "Install cloud-image-utils package:\n"
+                "  Ubuntu/Debian: sudo apt install -y cloud-image-utils\n"
+                "  Fedora/CentOS: sudo dnf install -y cloud-utils\n"
+                "  Arch Linux: sudo pacman -S cloud-image-utils\n"
+                "Then run: dockvirt check"
+            )
+        elif "virsh: command not found" in result.stderr:
+            raise RuntimeError(
+                "Missing dependency: virsh command not found.\n"
+                "Install libvirt tools:\n"
+                "  Ubuntu/Debian: sudo apt install -y qemu-kvm "
+                "libvirt-daemon-system libvirt-clients\n"
+                "  Fedora/CentOS: sudo dnf install -y qemu-kvm "
+                "libvirt virt-install\n"
+                "Then run: dockvirt check"
+            )
+        elif "qemu-img: command not found" in result.stderr:
+            raise RuntimeError(
+                "Missing dependency: qemu-img command not found.\n"
+                "Install QEMU tools:\n"
+                "  Ubuntu/Debian: sudo apt install -y qemu-utils\n"
+                "  Fedora/CentOS: sudo dnf install -y qemu-img\n"
+                "Then run: dockvirt check"
+            )
+        else:
+            raise RuntimeError(f"Command failed: {result.stderr}")
     return result.stdout.strip()
 
 
