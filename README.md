@@ -547,6 +547,36 @@ sudo virsh net-start default || true
 sudo virsh net-autostart default
 ```
 
+## 🤖 Automation Agent
+
+Use the built-in Automation Agent to validate your setup end-to-end, including domain reachability. It can optionally apply safe fixes (ACL/SELinux for qemu:///system and /etc/hosts entries) using sudo.
+
+```bash
+# Summary mode (no sudo changes): tests examples, prints report
+make agent
+
+# Auto-fix mode (sudo): doctor --fix, default network, ACL/SELinux, /etc/hosts
+make agent-fix
+
+# Filter examples, skip host Docker build (image built inside VM)
+PY=.venv-3.13/bin/python \
+  $PY scripts/agent.py run --example 1-static-nginx-website --skip-host-build
+
+# Select OS variants to test
+$PY scripts/agent.py run --os ubuntu22.04 --os fedora38 --skip-host-build
+
+# Report location
+cat agent_report.md
+```
+
+What it does:
+
+- Creates VMs with `dockvirt up` per example and OS variant.
+- Fetches VM IP via virsh leases and checks HTTP by IP.
+- Verifies local DNS for domain (from `.dockvirt`) and checks HTTP via domain.
+- Optionally appends to `/etc/hosts` (auto mode) when a domain doesn’t resolve.
+- Cleans up VMs with `dockvirt down`.
+
 ## 💾 Generating Images and Packages
 
 ### 📦 Distribution Packages (.deb/.rpm)

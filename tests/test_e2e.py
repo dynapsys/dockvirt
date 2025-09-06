@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import pytest
 
 VM_NAME = "test-dockvirt-vm"
@@ -45,7 +46,7 @@ def test_vm_lifecycle(check_dependencies):
         # Step 1: Create the VM
         print(f"\n🚀 Creating VM '{VM_NAME}'...")
         run_command(
-            f"dockvirt up --name {VM_NAME} --domain {DOMAIN} "
+            f"{sys.executable} -m dockvirt.cli up --name {VM_NAME} --domain {DOMAIN} "
             f"--image {image} --port 80 --os {os_variant}"
         )
 
@@ -57,7 +58,7 @@ def test_vm_lifecycle(check_dependencies):
     finally:
         # Step 3: Destroy the VM
         print(f"\n🗑️ Destroying VM '{VM_NAME}'...")
-        run_command(f"dockvirt down --name {VM_NAME}")
+        run_command(f"{sys.executable} -m dockvirt.cli down --name {VM_NAME}")
 
         # Step 4: Verify the VM is destroyed
         print(f"🔍 Verifying VM '{VM_NAME}' is destroyed...")

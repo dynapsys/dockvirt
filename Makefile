@@ -24,6 +24,8 @@ help:
 	@echo "  test-examples   - Test all examples on different systems"
 	@echo "  check           - Check system dependencies"
 	@echo "  doctor          - Diagnose and optionally fix environment issues"
+	@echo "  agent           - Run automation agent (no sudo changes)"
+	@echo "  agent-fix       - Run automation agent with auto-fix and /etc/hosts updates"
 	@echo "  lint            - Check code with linters (flake8, black)"
 	@echo "  format          - Format code (black, isort)"
 	@echo "  docs            - Build documentation"
@@ -136,6 +138,15 @@ test-commands: install
 docs:
 	@echo "📚 Building documentation..."
 	@echo "Documentation is in README.md and examples/"
+
+# Automation Agent
+agent:
+	@echo "🤖 Running Dockvirt Automation Agent (summary mode)..."
+	$(PY) scripts/agent.py run
+
+agent-fix:
+	@echo "🤖 Running Dockvirt Automation Agent with auto-fix (sudo may be required)..."
+	$(PY) scripts/agent.py run --auto-fix --auto-hosts --skip-host-build
 
 # Doctor (diagnostics and optional fixes)
 doctor:
