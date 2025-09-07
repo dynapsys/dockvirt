@@ -1,0 +1,17 @@
+[Unit]
+Description=Dockvirt LAN Exposure (iptables DNAT Host:80 -> 127.0.0.1:{{PORT}})
+After=network-online.target firewalld.service NetworkManager.service dockvirt-test-server.service
+Wants=network-online.target dockvirt-test-server.service
+Requires=dockvirt-test-server.service
+
+[Service]
+Type=simple
+WorkingDirectory={{REPO_DIR}}
+ExecStart=/usr/bin/bash -lc 'bash scripts/dockvirt_lan_simple.sh --port {{PORT}}'
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -476,6 +476,85 @@ We have prepared several practical examples to show you the possibilities of the
 
 Each example now uses the new, simplified API - you no longer need to provide image paths or OS variants!
 
+## 🔍 HTTPS Diagnostic Tools
+
+DockerVirt includes comprehensive diagnostic tools for validating HTTPS domains and troubleshooting connection issues:
+
+### 📋 HTTPS Connection Tester
+
+Test all aspects of HTTPS connectivity including DNS, port accessibility, SSL certificates, and content:
+
+```bash
+# Test HTTPS connection comprehensively
+python3 scripts/https_connection_tester.py https://your-domain.dockvirt.dev:8443
+
+# Example output includes:
+# ✅ DNS Resolution: domain -> IP
+# ✅ Port Connectivity: Port accessible
+# ✅ SSL Certificate: Details and verification status  
+# ✅ HTTP Content: Response and headers
+# 🔍 Headless Browser Test: Automated browser testing
+```
+
+### 🔧 HTTPS Issues Bypass Solutions
+
+When encountering HSTS policies or certificate trust issues:
+
+```bash
+# Generate multiple bypass solutions
+python3 scripts/hsts_certificate_bypass.py your-domain.dockvirt.dev 8443
+
+# Solutions provided:
+# 1️⃣ Alternative domain without HSTS (recommended)
+# 2️⃣ Firefox developer profile with disabled certificate checks
+# 3️⃣ Chromium with certificate bypass flags
+# 4️⃣ Manual HSTS cache clearing instructions
+# 5️⃣ Locally trusted certificate generation
+```
+
+### 🌐 Common HTTPS Issues & Solutions
+
+**Problem: "SEC_ERROR_UNKNOWN_ISSUER" + HSTS Policy**
+
+```bash
+# Quick fix - Use alternative domain:
+# 1. Run bypass script to create https-demo.local
+python3 scripts/hsts_certificate_bypass.py
+
+# 2. Access via new domain (no HSTS):
+# https://https-demo.local:8443/
+
+# 3. Or use Firefox developer profile:
+scripts/firefox-dev-https.sh https://your-domain.dockvirt.dev:8443/
+```
+
+**Problem: "Unable to Connect" - VM Not Responding**
+
+```bash
+# Diagnose connection issues:
+python3 scripts/https_connection_tester.py https://domain:port
+
+# Common fixes:
+# - Wait for VM to fully boot (60s+)
+# - Check if VM service is running inside
+# - Verify port is accessible: nc -zv IP PORT
+```
+
+### 🔒 Certificate Trust Solutions
+
+For production-like local HTTPS without browser warnings:
+
+```bash
+# Method 1: Clear HSTS cache manually
+# Firefox: about:networking#hsts -> Delete domain
+
+# Method 2: Use alternative domain
+# Generated automatically by bypass script
+
+# Method 3: Install local CA (advanced)
+# Creates trusted certificates in /tmp/https-certs/
+```
+
 ## 🚨 Troubleshooting
 
 ### ❌ "cloud-localds: command not found"

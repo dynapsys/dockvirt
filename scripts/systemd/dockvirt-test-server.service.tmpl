@@ -1,0 +1,18 @@
+[Unit]
+Description=Dockvirt LAN Test HTTP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{REPO_DIR}}
+ExecStart=/usr/bin/python3 {{REPO_DIR}}/scripts/test_server.py --host {{HOST}} --port {{PORT}}
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
