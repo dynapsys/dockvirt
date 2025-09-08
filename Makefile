@@ -198,78 +198,18 @@ test-quick: install
 	$(PY) -m dockvirt.cli check || echo "⚠️  Some dependencies missing"
 	@echo "✅ Quick test complete"
 
-# Docker test environment
-DOCKER_TEST_DIR := .ci/docker-test
-DOCKER_TEST_IMAGE := dockvirt/test-env:latest
-
+# Delegating docker-test targets (migrated to scripts)
 docker-test-build:
-	@echo "🐳 Building Docker test image..."
-	mkdir -p $(DOCKER_TEST_DIR)
-	# Write Dockerfile
-	cat > $(DOCKER_TEST_DIR)/Dockerfile << 'EOF'
-FROM ubuntu:22.04
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-    qemu-kvm libvirt-daemon-system libvirt-clients virt-install qemu-utils \
-    cloud-image-utils bridge-utils wget curl iproute2 iputils-ping \
-    sudo make git python3 python3-pip python3-venv python3-dev gcc \
- && rm -rf /var/lib/apt/lists/*
-RUN useradd -m -s /bin/bash dev && echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev && chmod 0440 /etc/sudoers.d/dev
-WORKDIR /workspace
-ENV LIBVIRT_DEFAULT_URI=qemu:///system
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["/bin/bash"]
-EOF
-	# Write entrypoint
-	cat > $(DOCKER_TEST_DIR)/entrypoint.sh << 'EOF'
-#!/usr/bin/env bash
-set -e
-# Start libvirtd (daemonize)
-mkdir -p /var/run/libvirt
-/usr/sbin/libvirtd -d || true
-sleep 2
-# Ensure default libvirt network
-virsh --connect qemu:///system net-define /usr/share/libvirt/networks/default.xml 2>/dev/null || true
-virsh --connect qemu:///system net-start default 2>/dev/null || true
-virsh --connect qemu:///system net-autostart default 2>/dev/null || true
-# Relax /dev/kvm if present
-if [ -e /dev/kvm ]; then
-  chgrp kvm /dev/kvm || true
-  chmod g+rw /dev/kvm || true
-fi
-exec "$@"
-EOF
-	docker build -t $(DOCKER_TEST_IMAGE) $(DOCKER_TEST_DIR)
-	@echo "✅ Docker test image built: $(DOCKER_TEST_IMAGE)"
+	bash scripts/docker-test/build.sh
 
 docker-test-clean:
-	@echo "🧹 Cleaning docker test artifacts..."
-	rm -rf $(DOCKER_TEST_DIR)
+	bash scripts/docker-test/clean.sh
 
-# Open interactive shell in test container
-docker-test-shell: docker-test-build
-	@echo "🐚 Opening shell in test container..."
-	docker run --rm -it --privileged --network=host \
-	  -v "$$PWD":/workspace -w /workspace \
-	  $(shell test -e /dev/kvm && echo --device=/dev/kvm) \
-	  $(DOCKER_TEST_IMAGE) bash
+docker-test-shell:
+	bash scripts/docker-test/shell.sh
 
-# Run quick tests (no VM creation) inside Docker
-docker-test-quick: docker-test-build
-	@echo "🚀 Running quick tests in docker..."
-	docker run --rm -it --privileged --network=host \
-	  -v "$$PWD":/workspace -w /workspace \
-	  -e SKIP_HOST_BUILD=1 \
-	  $(shell test -e /dev/kvm && echo --device=/dev/kvm) \
-	  $(DOCKER_TEST_IMAGE) bash -lc 'su - dev -c "cd /workspace && python3 -m venv --system-site-packages .venv-3.13 && source .venv-3.13/bin/activate && pip install -U pip setuptools wheel && pip install -e .[dev] --no-deps && pip install jinja2 click pyyaml && make doctor && PIP_NO_DEPS=1 make install && PIP_NO_DEPS=1 make test-commands && PIP_NO_DEPS=1 make test-quick && make build"'
+docker-test-quick:
+	bash scripts/docker-test/run-quick.sh
 
-# Run full tests (includes VM lifecycle) inside Docker
-docker-test-full: docker-test-build
-	@echo "🏗️ Running full tests (VM) in docker..."
-	docker run --rm -it --privileged --network=host \
-	  -v "$$PWD":/workspace -w /workspace \
-	  -e SKIP_HOST_BUILD=1 \
-	  $(shell test -e /dev/kvm && echo --device=/dev/kvm) \
-	  $(DOCKER_TEST_IMAGE) bash -lc 'su - dev -c "cd /workspace && python3 -m venv --system-site-packages .venv-3.13 && source .venv-3.13/bin/activate && pip install -U pip setuptools wheel && pip install -e .[dev] --no-deps && pip install jinja2 click pyyaml && make doctor-fix && PIP_NO_DEPS=1 make install && PIP_NO_DEPS=1 make test-commands && PIP_NO_DEPS=1 make test-quick && make test-e2e && SKIP_HOST_BUILD=1 make test-examples && make agent"'
+docker-test-full:
+	bash scripts/docker-test/run-full.sh

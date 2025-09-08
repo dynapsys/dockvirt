@@ -822,3 +822,86 @@ which dockvirt
 ## 📜 License
 
 This project is licensed under the **Apache 2.0 License**. See the [LICENSE](LICENSE) file for details.
+
+## 📚 Documentation Index
+
+- Main: [README.md](./README.md)
+- Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Diagnostic tools overview: [scripts/README_DIAGNOSTIC_TOOLS.md](./scripts/README_DIAGNOSTIC_TOOLS.md)
+- Examples overview: [examples/README.md](./examples/README.md)
+- Examples (direct):
+  - [examples/1-static-nginx-website/README.md](./examples/1-static-nginx-website/README.md)
+  - [examples/2-python-flask-app/README.md](./examples/2-python-flask-app/README.md)
+  - [examples/3-multi-os-comparison/README.md](./examples/3-multi-os-comparison/README.md)
+  - [examples/4-microservices-stack/README.md](./examples/4-microservices-stack/README.md)
+  - [examples/5-production-deployment/README.md](./examples/5-production-deployment/README.md)
+- Testing and automation:
+  - Command validator: [scripts/test_commands_robust.py](./scripts/test_commands_robust.py)
+  - Examples test runner: [scripts/test_examples.py](./scripts/test_examples.py)
+  - Automation Agent: [scripts/agent.py](./scripts/agent.py)
+  - Doctor: [scripts/doctor.py](./scripts/doctor.py)
+  - Recent reports (generated): [test_results.md](./test_results.md), [command_test_results.md](./command_test_results.md), [agent_report.md](./agent_report.md)
+- System setup:
+  - Installer: [scripts/install.sh](./scripts/install.sh)
+  - LAN exposure tools: [scripts/systemd/](./scripts/systemd/), [scripts/dockvirt_lan_expose.sh](./scripts/dockvirt_lan_expose.sh), [scripts/comprehensive_lan_test.py](./scripts/comprehensive_lan_test.py)
+
+## 🧭 Code Reference Map
+
+- CLI entrypoint: [dockvirt/cli.py](./dockvirt/cli.py)
+- Configuration loader and layered `.dockvirt`: [dockvirt/config.py](./dockvirt/config.py)
+- Image management (download/cache): [dockvirt/image_manager.py](./dockvirt/image_manager.py)
+- VM lifecycle (create/destroy/IP): [dockvirt/vm_manager.py](./dockvirt/vm_manager.py)
+- System checks: [dockvirt/system_check.py](./dockvirt/system_check.py)
+- Self-heal routines: [dockvirt/self_heal.py](./dockvirt/self_heal.py)
+- Image generator (planned features scaffolding): [dockvirt/image_generator.py](./dockvirt/image_generator.py)
+- Event log DB: [dockvirt/logdb.py](./dockvirt/logdb.py)
+- Cloud-init templates: [dockvirt/templates/](./dockvirt/templates/)
+
+## 🐳 Docker Test Environment
+
+To validate README/Makefile commands in a reproducible container with libvirt/KVM, use these Makefile targets (they call scripts in `scripts/docker-test/`):
+
+```bash
+make docker-test-build   # build the test image
+make docker-test-quick   # doctor + command tests + build (no VM)
+make docker-test-full    # full flow: doctor-fix, e2e, examples, agent (VMs)
+make docker-test-shell   # interactive shell for debugging
+```
+
+Scripts:
+- [scripts/docker-test/Dockerfile](./scripts/docker-test/Dockerfile)
+- [scripts/docker-test/entrypoint.sh](./scripts/docker-test/entrypoint.sh)
+- [scripts/docker-test/build.sh](./scripts/docker-test/build.sh)
+- [scripts/docker-test/run-quick.sh](./scripts/docker-test/run-quick.sh)
+- [scripts/docker-test/run-full.sh](./scripts/docker-test/run-full.sh)
+- [scripts/docker-test/shell.sh](./scripts/docker-test/shell.sh)
+- [scripts/docker-test/clean.sh](./scripts/docker-test/clean.sh)
+
+### ASCII: Docker Test Architecture
+
+```
++----------------------+         +---------------------------------+
+|      Host (Linux)    |         |        Docker Container         |
+|----------------------|         |---------------------------------|
+| Docker, /dev/kvm?    |  mount  | libvirtd + qemu-kvm + virsh     |
+| Network: host mode   | <-----> | /workspace (repo bind-mounted)  |
+|                       \        | Python venv (.venv-3.13)        |
++----------------------+ \       | Makefile targets (tests)        |
+                           \---->| Default libvirt network (NAT)   |
+                                   +---------------------------------+
+```
+
+### Mermaid: Automation Agent Flow
+
+```mermaid
+flowchart TD
+  A[make agent / agent-fix] --> B[Doctor check / fix]
+  B --> C[Ensure libvirt default network]
+  C --> D[Iterate examples]
+  D --> E[dockvirt up]
+  E --> F[Wait for IP]
+  F --> G[HTTP by IP]
+  G --> H[DNS resolve domain]
+  H --> I[HTTP by domain]
+  I --> J[dockvirt down]
+  J --> K[Report: agent_report.md]
