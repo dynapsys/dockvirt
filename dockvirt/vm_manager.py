@@ -30,57 +30,26 @@ def run(command):
         logger.debug(f"Command stderr: {result.stderr}")
     
     if result.returncode != 0:
-        # Check for common missing dependencies and provide helpful messages
-        if "cloud-localds: command not found" in result.stderr:
+        # Check for common missing dependencies and provide a generic helpful message
+        if "command not found" in result.stderr:
+            tool = result.stderr.split(":")[0].strip()
             raise RuntimeError(
-                "Missing dependency: cloud-localds command not found.\n"
-                "Install cloud-image-utils package:\n"
-                "  Ubuntu/Debian: sudo apt install -y cloud-image-utils\n"
-                "  Fedora/CentOS: sudo dnf install -y cloud-utils\n"
-                "  Arch Linux: sudo pacman -S cloud-image-utils\n"
-                "Then run: dockvirt check"
-            )
-        elif "virsh: command not found" in result.stderr:
-            raise RuntimeError(
-                "Missing dependency: virsh command not found.\n"
-                "Install libvirt tools:\n"
-                "  Ubuntu/Debian: sudo apt install -y qemu-kvm "
-                "libvirt-daemon-system libvirt-clients\n"
-                "  Fedora/CentOS: sudo dnf install -y qemu-kvm "
-                "libvirt virt-install\n"
-                "Then run: dockvirt check"
-            )
-        elif "qemu-img: command not found" in result.stderr:
-            raise RuntimeError(
-                "Missing dependency: qemu-img command not found.\n"
-                "Install QEMU tools:\n"
-                "  Ubuntu/Debian: sudo apt install -y qemu-utils\n"
-                "  Fedora/CentOS: sudo dnf install -y qemu-img\n"
-                "Then run: dockvirt check"
+                f"Missing dependency: '{tool}' command not found.\n"
+                f"Please run 'dockvirt doctor' or 'dockvirt setup --install' to diagnose and fix dependency issues."
             )
         elif "Permission denied" in result.stderr and (".dockvirt" in result.stderr or "cidata.iso" in result.stderr or ".qcow2" in result.stderr):
             raise RuntimeError(
                 "Permission denied writing VM files under ~/.dockvirt.\n"
                 "When using system libvirt (qemu:///system), apply ACLs and SELinux labels so the 'qemu' user can access your home.\n\n"
-                "Run the following commands (safe to apply):\n"
-                "  sudo setfacl -m u:qemu:x \"$HOME\"\n"
-                "  sudo setfacl -R -m u:qemu:rx \"$HOME/.dockvirt\"\n"
-                "  sudo find \"$HOME/.dockvirt\" -type f -name '*.qcow2' -exec setfacl -m u:qemu:rw {} +\n"
-                "  sudo find \"$HOME/.dockvirt\" -type f -name '*.iso' -exec setfacl -m u:qemu:r {} +\n\n"
-                "If SELinux is enabled (Fedora/RHEL):\n"
-                "  sudo semanage fcontext -a -t svirt_image_t \"$HOME/.dockvirt(/.*)?\\.qcow2\"\n"
-                "  sudo semanage fcontext -a -t svirt_image_t \"$HOME/.dockvirt(/.*)?\\.iso\"\n"
-                "  sudo restorecon -Rv \"$HOME/.dockvirt\"\n"
+                "Run 'dockvirt doctor' for detailed instructions."
             )
-        else:
-            if "network 'default' is not active" in result.stderr.lower():
-                raise RuntimeError(
-                    "Default libvirt network is inactive.\n"
-                    "Run: sudo virsh net-define /usr/share/libvirt/networks/default.xml && "
-                    "sudo virsh net-start default && sudo virsh net-autostart default\n"
-                    "Then retry: dockvirt heal; dockvirt up"
-                )
-            raise RuntimeError(f"Command failed: {result.stderr}")
+        elif "network 'default' is not active" in result.stderr.lower():
+            raise RuntimeError(
+                "Default libvirt network is inactive.\n"
+                "Run: sudo virsh net-start default && sudo virsh net-autostart default\n"
+                "Or run 'dockvirt heal' for more diagnostics."
+            )
+        raise RuntimeError(f"Command failed: {result.stderr}")
     return result.stdout.strip()
 
 

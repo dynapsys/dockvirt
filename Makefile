@@ -156,7 +156,7 @@ repair-docs:
 	$(PY) scripts/repair_docs.py --apply --report repair_docs_report.md
 
 # Automation Agent
-agent:
+agent: install validate
 	@echo "🤖 Running Dockvirt Automation Agent (summary mode)..."
 	$(PY) scripts/agent.py run --verbose
 
@@ -179,11 +179,11 @@ sdlc-full:
 # Doctor (diagnostics and optional fixes)
 doctor:
 	@echo "🩺 Running Dockvirt Doctor..."
-	$(PY) scripts/doctor.py
+	$(PY) -m dockvirt.cli doctor
 
 doctor-fix:
 	@echo "🩺 Running Dockvirt Doctor with auto-fix..."
-	$(PY) scripts/doctor.py --fix --yes
+	$(PY) -m dockvirt.cli doctor --fix --yes
 
 # Repair and validate all commands
 repair: install
@@ -213,3 +213,7 @@ docker-test-quick:
 
 docker-test-full:
 	bash scripts/docker-test/run-full.sh
+
+validate:
+	@echo "✅ Validating and fixing environment..."
+	@$(PY) -m dockvirt.cli doctor --fix --yes

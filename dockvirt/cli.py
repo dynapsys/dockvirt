@@ -13,6 +13,7 @@ from .self_heal import (
     on_exception_hints,
     ensure_cli_log_file,
 )
+from .doctor import run_doctor
 from .logdb import append_event
 
 # Configure logging
@@ -181,6 +182,15 @@ def setup_system(install):
             sys.exit(1)
     else:
         check_system_dependencies()
+
+
+@main.command(name="doctor")
+@click.option("--summary", is_flag=True, help="Print compact summary only")
+@click.option("--fix", is_flag=True, help="Attempt non-destructive fixes (may require sudo)")
+@click.option("--yes", is_flag=True, help="Assume 'yes' for prompts when using --fix")
+def doctor_command(summary, fix, yes):
+    """Diagnose and fix environment issues."""
+    run_doctor(summary=summary, fix=fix, assume_yes=yes)
 
 
 @main.command(name="heal")
