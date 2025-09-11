@@ -29,14 +29,76 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, Tuple, Optional, List
-
+from queue import Queue, Empty
+from datetime import datetime
 import click
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_DIR = REPO_ROOT / "examples"
+LOGS_DIR = REPO_ROOT / "logs"
 DEFAULT_REPORT = REPO_ROOT / "agent_report.md"
 DEFAULT_LIBVIRT_URI = os.environ.get("LIBVIRT_DEFAULT_URI", "qemu:///system")
 
+
+class HealthReport:
+    """Data class for health check results."""
+
+    def __init__(self, vm_name: str, domain: str, ip: str, port: str):
+        self.vm_name = vm_name
+        self.domain = domain
+        self.ip = ip
+        self.port = port
+        self.report_path = (
+            LOGS_DIR / f"health_report_{vm_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        )
+        LOGS_DIR.mkdir(exist_ok=True)
+        self.report_path.touch()
+        print(f"[agent] Health reports for {vm_name} will be saved to {self.report_path}")
+
+    def add(self, msg: str):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{timestamp}] {msg}\n"
+        print(f"[health-check:{self.vm_name}] {msg}")
+        with self.report_path.open("a", encoding="utf-8") as f:
+            f.write(line)
+
+
+def health_check_worker(queue: Queue, report: HealthReport, interval: int):
+    """Periodically checks VM health and logs to a report."""
+    report.add("Health monitoring started.")
+    while True:
+        try:
+            if queue.get_nowait() == "stop":
+                report.add("Health monitoring stopping.")
+                break
+        except Empty:
+            pass
+
+        current_ip = get_vm_ip(report.vm_name)
+        if current_ip:
+            if report.ip != current_ip:
+                report.add(f"IP changed from {report.ip} to {current_ip}")
+                report.ip = current_ip
+            report.add(f"IP: {current_ip} (OK)")
+        else:
+            report.add("IP: Not found (Error)")
+
+        rc, _, _ = run(f"getent hosts {report.domain}")
+        report.add(
+            f"Domain: {report.domain} ({'Resolves' if rc == 0 else 'Not Resolving'})")
+
+        http_url = f"http://{report.ip}:{report.port}/"
+        ok, code = http_check(http_url, host=report.domain)
+        report.add(f"HTTP: {http_url} -> {code} ({'OK' if ok else 'Failed'})")
+
+        cli_log_tail = _tail(Path.home() / ".dockvirt" / "cli.log", 10)
+        if cli_log_tail:
+            report.add(f"--- cli.log tail ---\n{cli_log_tail}\n--------------------")
+
+        time.sleep(interval)
+
+
+import threading
 
 def run(
     cmd: str,
@@ -416,6 +478,13 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
 
             # Down
             run(f"{py} -m dockvirt.cli down --name {vm_name}")
+
+            # Start health check worker
+            report = HealthReport(vm_name, domain, ip, port)
+            queue = Queue()
+            worker = threading.Thread(target=health_check_worker, args=(queue, report, 60))
+            worker.daemon = True
+            worker.start()
 
     # Write report
     # Optional: LLM remediation pass
