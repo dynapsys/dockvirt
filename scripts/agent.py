@@ -201,20 +201,34 @@ except Exception:
         return []
 
 
-def ensure_libvirt_default_network(verbose: bool = False) -> List[str]:
-    notes = []
+def ensure_libvirt_default_network(auto_fix: bool = False, verbose: bool = False) -> List[str]:
+    """Ensure the libvirt default network is active.
+
+    In summary mode (auto_fix=False), do not run sudo commands; just report
+    the situation and provide guidance.
+    """
+    notes: List[str] = []
     rc, out, err = run("virsh --connect qemu:///system net-info default", echo=verbose)
     if rc != 0:
-        # Try define+start+autostart
-        notes.append("default network missing; attempting define/start/autostart")
-        run("sudo systemctl enable --now libvirtd", echo=verbose)
-        run("sudo virsh net-define /usr/share/libvirt/networks/default.xml || true", echo=verbose)
-        run("sudo virsh net-start default || true", echo=verbose)
-        run("sudo virsh net-autostart default || true", echo=verbose)
-    else:
-        if "Active: yes" not in out:
+        notes.append("libvirt default network not found")
+        if auto_fix:
+            notes.append("attempting define/start/autostart of default network")
+            run("sudo systemctl enable --now libvirtd", echo=verbose)
+            run("sudo virsh net-define /usr/share/libvirt/networks/default.xml || true", echo=verbose)
             run("sudo virsh net-start default || true", echo=verbose)
             run("sudo virsh net-autostart default || true", echo=verbose)
+        else:
+            notes.append("summary mode: no sudo changes; run 'make agent-fix' or start libvirtd and default network manually")
+    else:
+        if "Active: yes" not in out:
+            notes.append("libvirt default network present but inactive")
+            if auto_fix:
+                run("sudo virsh net-start default || true", echo=verbose)
+                run("sudo virsh net-autostart default || true", echo=verbose)
+            else:
+                notes.append("summary mode: not starting network; run 'make agent-fix' to auto-fix")
+        else:
+            notes.append("libvirt default network active")
     return notes
 
 
@@ -403,15 +417,17 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
         # Fix ownership early to prevent cloud-localds write errors
         report_lines.extend(f"- {n}" for n in fix_ownership(Path.home(), verbose=verbose))
         click.echo("[agent] Ensuring default libvirt network...")
-        ensure_libvirt_default_network(verbose=verbose)
+        notes = ensure_libvirt_default_network(auto_fix=True, verbose=verbose)
+        report_lines.extend(f"- {n}" for n in notes)
         click.echo("[agent] Applying ACL/SELinux fixes (if needed)...")
-        fix_acl_selinux(Path.home(), verbose=verbose)
+        report_lines.extend(f"- {n}" for n in fix_acl_selinux(Path.home(), verbose=verbose))
     else:
         report_lines.append("\n## Doctor (summary)")
         click.echo("[agent] Running doctor (summary)...")
         run(f"{py} scripts/doctor.py --summary", echo=verbose)
         click.echo("[agent] Ensuring default libvirt network...")
-        ensure_libvirt_default_network(verbose=verbose)
+        notes = ensure_libvirt_default_network(auto_fix=False, verbose=verbose)
+        report_lines.extend(f"- {n}" for n in notes)
 
     # Examples to test
     examples: List[Path]
@@ -443,7 +459,7 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
 
             # Ensure default network is active before starting VM
             click.echo(f"[agent] Ensuring default libvirt network is active before starting {vm_name}...")
-            ensure_libvirt_default_network(verbose=verbose)
+            ensure_libvirt_default_network(auto_fix=auto_fix, verbose=verbose)
 
             # Up
             cmd_up = (

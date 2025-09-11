@@ -48,6 +48,7 @@ REQUIRED_CMDS = [
     "qemu-img",
     "docker",
     "wget",
+    "curl",
 ]
 
 OPTIONAL_CMDS = [
@@ -67,7 +68,7 @@ class Finding:
 
 def run(cmd: str, check: bool = False, sudo: bool = False) -> Tuple[int, str, str]:
     """Run a shell command, logging inputs and outputs in detail."""
-    shell_cmd = f"sudo bash -lc '{cmd}'" if sudo else f"bash -lc '{cmd}'"
+    shell_cmd = f"sudo -n bash -lc '{cmd}'" if sudo else f"bash -lc '{cmd}'"
     logger.debug("RUN: %s", shell_cmd)
     p = subprocess.run(shell_cmd, shell=True, text=True, capture_output=True)
     rc, out_s, err_s = p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
@@ -114,7 +115,7 @@ def dockvirt_binding() -> List[Finding]:
         except Exception:
             first = ""
         findings.append(Finding(True, "dockvirt in PATH", exe_path))
-        if first.startswith("#!_py"):
+        if first.startswith("#!"):
             findings.append(Finding(True, "dockvirt shebang", first))
         logger.info("dockvirt in PATH: %s", exe_path)
         if first:
@@ -161,6 +162,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo apt install -y qemu-utils",
                         "docker": "curl -fsSL https://get.docker.com | sh",
                         "wget": "sudo apt install -y wget",
+                        "curl": "sudo apt install -y curl",
                     }
                 elif os_id in ("fedora", "centos", "rhel"):
                     mapping = {
@@ -170,6 +172,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo dnf install -y qemu-img",
                         "docker": "curl -fsSL https://get.docker.com | sh",
                         "wget": "sudo dnf install -y wget",
+                        "curl": "sudo dnf install -y curl",
                     }
                 else:
                     mapping = {
@@ -179,6 +182,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo pacman -S --noconfirm qemu-img",
                         "docker": "sudo pacman -S --noconfirm docker",
                         "wget": "sudo pacman -S --noconfirm wget",
+                        "curl": "sudo pacman -S --noconfirm curl",
                     }
                 fix = mapping.get(c)
             finding = Finding(False, f"{c}", "Not found", fix=fix)

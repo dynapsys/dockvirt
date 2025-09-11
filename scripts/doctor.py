@@ -76,6 +76,7 @@ REQUIRED_CMDS = [
     "qemu-img",
     "docker",
     "wget",
+    "curl",
 ]
 
 OPTIONAL_CMDS = [
@@ -204,6 +205,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo apt install -y qemu-utils",
                         "docker": "curl -fsSL https://get.docker.com | sh",
                         "wget": "sudo apt install -y wget",
+                        "curl": "sudo apt install -y curl",
                     }
                 elif os_id in ("fedora", "centos", "rhel"):
                     mapping = {
@@ -213,6 +215,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo dnf install -y qemu-img",
                         "docker": "curl -fsSL https://get.docker.com | sh",
                         "wget": "sudo dnf install -y wget",
+                        "curl": "sudo dnf install -y curl",
                     }
                 else:
                     mapping = {
@@ -222,6 +225,7 @@ def check_commands() -> List[Finding]:
                         "qemu-img": "sudo pacman -S --noconfirm qemu-img",
                         "docker": "sudo pacman -S --noconfirm docker",
                         "wget": "sudo pacman -S --noconfirm wget",
+                        "curl": "sudo pacman -S --noconfirm curl",
                     }
                 fix = mapping.get(c)
             finding = Finding(False, f"{c}", "Not found", fix=fix)

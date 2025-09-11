@@ -95,8 +95,8 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
     docker_compose_template = docker_compose_template_path.read_text()
 
     docker_compose_content = Template(docker_compose_template).render(
-        image_name=name, 
-        ports=[port] if not https else [],
+        app_name=name,
+        app_image=image,
         home_dir=str(Path.home())
     )
     logger.debug(f"Docker compose rendered for app {name} with image {image}")
