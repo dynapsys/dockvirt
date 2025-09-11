@@ -33,7 +33,7 @@ def run_command(command):
         print(f"Error running command: {command}")
         print(f"STDOUT: {result.stdout}")
         print(f"STDERR: {result.stderr}")
-    result.raise_for_status()
+        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
     return result.stdout.strip()
 
 
