@@ -568,6 +568,44 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
                 tail = "\n".join(lines[-200:])
                 report_lines.append(f"  - VM log tail: {path}\n```text\n{tail}\n```")
 
+            # VM live diagnostics via QGA (while VM is up)
+            vm_diag_sections = _collect_vm_diagnostics(vm_name, os_variant, service_name=vm_name, vm_ip=ip)
+            for title, output in vm_diag_sections:
+                if output and output.strip():
+                    report_lines.append(f"  - VM diag: {title}\n```text\n{output.strip()}\n```")
+
+            # Host-side network diagnostics (while VM is still up)
+            host_diags = _host_network_diagnostics(vm_name, ip, domain)
+            for title, output in host_diags:
+                if output and output.strip():
+                    report_lines.append(f"  - Host diag: {title}\n```text\n{output.strip()}\n```")
+
+            # Root-cause checklist using collected diagnostics
+            ping_rc, _, _ = run(f"ping -c 2 {ip}")
+            ping_ok = ping_rc == 0
+            try:
+                p_int = int(port)
+            except Exception:
+                p_int = 80
+            tcp_ok, _ = tcp_check(ip, p_int, timeout=3)
+            http_ip_ok = ok_ip
+            http_ip_code = code_ip
+            _, dns_out_chk, _ = run(f"getent hosts {domain}")
+            domain_maps_to_ip = (ip in (dns_out_chk or ""))
+            checklist = _render_root_cause_checklist(
+                vm_name=vm_name,
+                vm_ip=ip,
+                domain=domain,
+                service_name=vm_name,
+                ping_ok=ping_ok,
+                tcp80_ok=tcp_ok,
+                http_ip_ok=http_ip_ok,
+                http_ip_code=http_ip_code,
+                domain_maps_to_ip=domain_maps_to_ip,
+                diag_sections=vm_diag_sections,
+            )
+            report_lines.append(checklist)
+
             # Stop health check worker and tear down
             health_queue.put("stop")
             health_thread.join(timeout=5)
@@ -655,6 +693,151 @@ def _fetch_vm_logs(vm_name: str, os_variant: str) -> List[Tuple[str, str]]:
         except Exception:
             continue
     return out
+
+
+def _collect_vm_diagnostics(vm_name: str, os_variant: str, service_name: str, vm_ip: str) -> List[Tuple[str, str]]:
+    """Collect useful runtime diagnostics from inside the VM via QGA."""
+    user = "ubuntu" if "ubuntu" in os_variant else ("fedora" if "fedora" in os_variant else "ubuntu")
+    cmds: List[Tuple[str, str]] = [
+        ("basic", "uname -a; echo; uptime; echo; whoami"),
+        ("network", "ip addr; echo; ip route; echo; (ss -ltnp || netstat -ltnp || true)"),
+        ("systemd: docker", "systemctl is-active docker; echo; systemctl status docker --no-pager -l | tail -n 120 || true"),
+        ("systemd: qemu-guest-agent", "systemctl is-active qemu-guest-agent; echo; systemctl status qemu-guest-agent --no-pager -l | tail -n 120 || true"),
+        ("cloud-init status", "(cloud-init status || true) && echo && (journalctl -u cloud-init -n 80 --no-pager || true)"),
+        ("docker ps", "docker ps -a --format '{{.ID}}  {{.Names}}  {{.Status}}  {{.Ports}}' || true"),
+        ("compose ps", "(docker compose ps || docker-compose ps) || true"),
+        ("caddy logs", "(docker compose logs --no-color --tail 200 reverse-proxy || docker-compose logs --no-color --tail 200 reverse-proxy) || true"),
+        (f"app logs ({service_name})", f"(docker compose logs --no-color --tail 200 {service_name} || docker-compose logs --no-color --tail 200 {service_name}) || true"),
+        ("http local 127.0.0.1:80", "curl -sSI --max-time 5 http://127.0.0.1:80/ || true"),
+        ("http self ip:80", f"curl -sSI --max-time 5 http://{vm_ip}:80/ || true"),
+        ("firewall", "(ufw status || true); echo; (firewall-cmd --state || true); echo; (iptables -S || true); echo; (iptables -t nat -S || nft list ruleset || true)"),
+        ("trace to host", "(tracepath -n -m 5 192.168.122.1 || traceroute -n -m 5 192.168.122.1 || ping -c 1 192.168.122.1 || true)"),
+        ("deploy.log tail", f"tail -n 200 /home/{user}/deploy.log || true"),
+        ("cloud-init-output.log tail", "tail -n 200 /var/log/cloud-init-output.log || true"),
+    ]
+    out: List[Tuple[str, str]] = []
+    for title, cmd in cmds:
+        rc, o, e = _qga_exec(vm_name, cmd)
+        combined = o + ("\n" + e if e else "")
+        out.append((title, combined))
+    return out
+
+
+def _host_network_diagnostics(vm_name: str, ip: str, domain: str) -> List[Tuple[str, str]]:
+    """Run host-side diagnostics to understand routing and libvirt state."""
+    cmds: List[Tuple[str, str]] = [
+        ("host ping -> VM", f"ping -c 4 {ip}"),
+        ("host tracepath -> VM", f"(tracepath -n -m 5 {ip} || traceroute -n -m 5 {ip} || true)"),
+        ("host ip/route/ports", "ip addr; echo; ip route; echo; (ss -ltnp || true)"),
+        ("libvirt domiflist", f"virsh --connect qemu:///system domiflist {vm_name} || true"),
+        ("libvirt leases", "virsh --connect qemu:///system net-dhcp-leases default || true"),
+        ("libvirt net-info/xml", "virsh --connect qemu:///system net-info default; echo; virsh --connect qemu:///system net-dumpxml default || true"),
+    ]
+    res: List[Tuple[str, str]] = []
+    for title, cmd in cmds:
+        rc, out, err = run(cmd)
+        res.append((title, (out or "") + ("\n" + err if err else "")))
+    return res
+
+
+def _render_root_cause_checklist(
+    vm_name: str,
+    vm_ip: str,
+    domain: str,
+    service_name: str,
+    ping_ok: bool,
+    tcp80_ok: bool,
+    http_ip_ok: bool,
+    http_ip_code: int,
+    domain_maps_to_ip: bool,
+    diag_sections: List[Tuple[str, str]],
+) -> str:
+    diag = {t: (o or "") for t, o in diag_sections}
+    net_txt = diag.get("network", "")
+    docker_txt = diag.get("systemd: docker", "")
+    qga_txt = diag.get("systemd: qemu-guest-agent", "")
+    compose_ps_txt = diag.get("compose ps", "")
+    docker_ps_txt = diag.get("docker ps", "")
+    caddy_logs_txt = diag.get("caddy logs", "")
+    http_local_txt = diag.get("http local 127.0.0.1:80", "")
+    http_self_txt = diag.get("http self ip:80", "")
+    cloud_status_txt = diag.get("cloud-init status", "")
+
+    def contains_listener_80(s: str) -> bool:
+        return ":80" in s or "0.0.0.0:80" in s or "[::]:80" in s
+
+    vm_listens_80 = contains_listener_80(net_txt)
+    docker_active = docker_txt.splitlines()[0:1] and ("active" in docker_txt.splitlines()[0])
+    qga_active = qga_txt.splitlines()[0:1] and ("active" in qga_txt.splitlines()[0])
+    http_127_ok = "200" in http_local_txt or "HTTP/1.1 200" in http_local_txt
+    http_self_ok = "200" in http_self_txt or "HTTP/1.1 200" in http_self_txt
+    app_up = (service_name in compose_ps_txt and ("Up" in compose_ps_txt or "running" in compose_ps_txt)) or (service_name in docker_ps_txt and "Up" in docker_ps_txt)
+    rp_up = ("reverse-proxy" in compose_ps_txt and ("Up" in compose_ps_txt or "running" in compose_ps_txt)) or ("reverse-proxy" in docker_ps_txt and "Up" in docker_ps_txt)
+    cloud_done = ("status: done" in cloud_status_txt) or ("status: disabled" in cloud_status_txt) or ("finished" in cloud_status_txt.lower())
+
+    def chk(val: Optional[bool], label: str, extra: str = "") -> str:
+        mark = "✅" if val is True else ("❌" if val is False else "⚠️")
+        return f"- {mark} {label}{(' - ' + extra) if extra else ''}"
+
+    lines: List[str] = []
+    lines.append("\n## Root cause checklist")
+    lines.append(chk(True, f"VM has IP {vm_ip}"))
+    lines.append(chk(ping_ok, "Host -> VM ping"))
+    lines.append(chk(tcp80_ok, "Host -> VM TCP :80 reachable"))
+    lines.append(chk(vm_listens_80 if qga_active else None, "VM listens on :80 (ss)"))
+    lines.append(chk(docker_active if qga_active else None, "Docker service active in VM"))
+    lines.append(chk(app_up if qga_active else None, f"App container '{service_name}' up"))
+    lines.append(chk(rp_up if qga_active else None, "Reverse-proxy container up"))
+    lines.append(chk(http_127_ok if qga_active else None, "HTTP 200 at 127.0.0.1:80 inside VM"))
+    lines.append(chk(http_ip_ok, f"HTTP by IP from host (code {http_ip_code})"))
+    lines.append(chk(domain_maps_to_ip, "Domain resolves to VM IP", extra=f"{domain} -> {vm_ip}" if domain_maps_to_ip else "mismatch"))
+    lines.append(chk(qga_active, "QEMU Guest Agent active in VM"))
+    lines.append(chk(cloud_done if qga_active else None, "cloud-init completed"))
+    # Quick hint if common failure
+    if ping_ok and not tcp80_ok:
+        lines.append("  Hint: TCP refused -> serwis HTTP nie nasłuchuje w VM (sprawdź Docker/Caddy).")
+    if not domain_maps_to_ip:
+        lines.append("  Hint: Domenę zmapuj w /etc/hosts lub popraw DNS na IP VM.")
+    return "\n".join(lines)
+
+
+def _qga_exec(vm_name: str, cmd: str, timeout: int = 20) -> Tuple[int, str, str]:
+    """Run a shell command inside the VM via qemu-guest-agent and capture output.
+
+    Returns (exitcode, stdout, stderr).
+    """
+    ok, resp = _qga_cmd(
+        vm_name,
+        {
+            "execute": "guest-exec",
+            "arguments": {
+                "path": "/bin/sh",
+                "arg": ["-lc", cmd],
+                "capture-output": True,
+            },
+        },
+        timeout=timeout,
+    )
+    if not ok or not isinstance(resp, dict) or "return" not in resp:
+        return 1, "", (resp if isinstance(resp, str) else "guest-exec failed")
+    pid = resp["return"].get("pid")
+    # Poll status
+    waited = 0
+    while waited < timeout:
+        ok, st = _qga_cmd(vm_name, {"execute": "guest-exec-status", "arguments": {"pid": pid}}, timeout=timeout)
+        if not ok or not isinstance(st, dict) or "return" not in st:
+            break
+        r = st["return"]
+        if r.get("exited"):
+            rc = int(r.get("exitcode", 1))
+            out_b64 = r.get("out-data", "")
+            err_b64 = r.get("err-data", "")
+            out = base64.b64decode(out_b64).decode("utf-8", errors="replace") if out_b64 else ""
+            err = base64.b64decode(err_b64).decode("utf-8", errors="replace") if err_b64 else ""
+            return rc, out, err
+        time.sleep(0.5)
+        waited += 1
+    return 124, "", "guest-exec timeout"
 
 
 if __name__ == "__main__":
