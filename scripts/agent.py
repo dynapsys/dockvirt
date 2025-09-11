@@ -448,6 +448,15 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
                 continue
             report_lines.append(f"- 🌐 IP: {ip}")
 
+            # Start health check worker
+            health_queue = Queue()
+            health_report = HealthReport(vm_name, domain, ip, str(port))
+            health_thread = threading.Thread(
+                target=health_check_worker, args=(health_queue, health_report, 60)
+            )
+            health_thread.daemon = True
+            health_thread.start()
+
             # HTTP by IP
             ip_url = f"http://{ip}/" if port == "80" else f"http://{ip}:{port}/"
             ok_ip, code_ip = wait_http(ip_url, seconds=120, interval=5, host=domain)
@@ -476,15 +485,12 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             else:
                 report_lines.append(f"- ⚠️ HTTP via domain failed ({code_dom}): {dom_url}")
 
+            # Stop health check worker and tear down
+            health_queue.put("stop")
+            health_thread.join(timeout=5)
+
             # Down
             run(f"{py} -m dockvirt.cli down --name {vm_name}")
-
-            # Start health check worker
-            report = HealthReport(vm_name, domain, ip, port)
-            queue = Queue()
-            worker = threading.Thread(target=health_check_worker, args=(queue, report, 60))
-            worker.daemon = True
-            worker.start()
 
     # Write report
     # Optional: LLM remediation pass
