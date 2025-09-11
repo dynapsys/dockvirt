@@ -27,11 +27,14 @@ import sys
 import time
 import shutil
 import subprocess
+import socket
 from pathlib import Path
 from typing import Dict, Tuple, Optional, List
 from queue import Queue, Empty
 from datetime import datetime
 import click
+import json
+import base64
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_DIR = REPO_ROOT / "examples"
@@ -101,6 +104,23 @@ def health_check_worker(queue: Queue, report: HealthReport, interval: int):
         else:
             report.add(f"Ping to {report.ip}: Failed")
             report.add(f"Ping Error: {ping_err.strip() if ping_err else 'No error output'}")
+
+        # TCP reachability checks (IP and domain)
+        try:
+            p = int(report.port)
+        except Exception:
+            p = 80
+        ok_tcp_ip, err_tcp_ip = tcp_check(report.ip, p, timeout=3)
+        if ok_tcp_ip:
+            report.add(f"TCP: {report.ip}:{p} reachable")
+        else:
+            report.add(f"TCP: {report.ip}:{p} NOT reachable ({err_tcp_ip})")
+
+        ok_tcp_dom, err_tcp_dom = tcp_check(report.domain, p, timeout=3)
+        if ok_tcp_dom:
+            report.add(f"TCP: {report.domain}:{p} reachable")
+        else:
+            report.add(f"TCP: {report.domain}:{p} NOT reachable ({err_tcp_dom})")
 
         # HTTP check with content retrieval
         http_url = f"http://{report.ip}:{report.port}/"
@@ -541,6 +561,13 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             else:
                 report_lines.append(f"- ⚠️ HTTP via domain failed ({code_dom}): {dom_url}")
 
+            # Try to fetch deploy logs from inside the VM for diagnostics (via QGA)
+            vm_logs = _fetch_vm_logs(vm_name, os_variant)
+            for path, content in vm_logs:
+                lines = content.splitlines()
+                tail = "\n".join(lines[-200:])
+                report_lines.append(f"  - VM log tail: {path}\n```text\n{tail}\n```")
+
             # Stop health check worker and tear down
             health_queue.put("stop")
             health_thread.join(timeout=5)
@@ -557,6 +584,77 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
         report_lines.extend(f"- {n}" for n in llm_notes)
     Path(report_file).write_text("\n".join(report_lines), encoding="utf-8")
     click.echo(f"Report saved to {report_file}")
+
+
+def tcp_check(host: str, port: int, timeout: int = 3) -> Tuple[bool, str]:
+    """Attempt a TCP connection to host:port, return (ok, error)."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+def _qga_cmd(vm_name: str, payload: dict, timeout: int = 5) -> Tuple[bool, dict | str]:
+    """Execute a QEMU guest agent command via virsh qemu-agent-command.
+
+    Returns (ok, data) where data is parsed JSON on success or stderr string on failure.
+    """
+    p_json = json.dumps(payload)
+    rc, out, err = run(
+        f"virsh --connect qemu:///system qemu-agent-command {vm_name} '{p_json}' --timeout {timeout}",
+        echo=False,
+    )
+    if rc != 0:
+        return False, err.strip()
+    try:
+        return True, json.loads(out.strip())
+    except Exception as e:
+        return False, f"parse_error: {e} | raw={out.strip()}"
+
+
+def _qga_file_read(vm_name: str, path: str, chunk: int = 32768) -> str:
+    """Read a file from inside the VM using qemu-guest-agent file APIs."""
+    ok, resp = _qga_cmd(vm_name, {"execute": "guest-file-open", "arguments": {"path": path, "mode": "r"}})
+    if not ok or not isinstance(resp, dict) or "return" not in resp:
+        return ""
+    handle = resp["return"]
+    buf: list[str] = []
+    try:
+        while True:
+            ok, resp = _qga_cmd(vm_name, {"execute": "guest-file-read", "arguments": {"handle": handle, "count": chunk}})
+            if not ok or not isinstance(resp, dict) or "return" not in resp:
+                break
+            r = resp["return"]
+            data_b64 = r.get("buf-b64", "")
+            if data_b64:
+                try:
+                    buf.append(base64.b64decode(data_b64).decode("utf-8", errors="replace"))
+                except Exception:
+                    pass
+            if r.get("eof"):
+                break
+    finally:
+        _qga_cmd(vm_name, {"execute": "guest-file-close", "arguments": {"handle": handle}})
+    return "".join(buf)
+
+
+def _fetch_vm_logs(vm_name: str, os_variant: str) -> List[Tuple[str, str]]:
+    """Try to fetch useful logs from inside the VM via qemu-guest-agent.
+
+    Returns list of (path, content) that were successfully read.
+    """
+    user = "ubuntu" if "ubuntu" in os_variant else ("fedora" if "fedora" in os_variant else "ubuntu")
+    candidates = [f"/home/{user}/deploy.log", "/var/log/cloud-init-output.log"]
+    out: List[Tuple[str, str]] = []
+    for p in candidates:
+        try:
+            data = _qga_file_read(vm_name, p)
+            if data:
+                out.append((p, data))
+        except Exception:
+            continue
+    return out
 
 
 if __name__ == "__main__":

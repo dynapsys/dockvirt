@@ -212,7 +212,8 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
         f"--disk path={disk_img},format=qcow2 "
         f"--disk path={cidata},device=cdrom "
         f"--os-variant {os_variant} "
-        f"--import --network {net_spec} --noautoconsole --graphics none"
+        f"--import --network {net_spec} --noautoconsole --graphics none "
+        f"--channel type=unix,target.type=virtio,target.name=org.qemu.guest_agent.0"
     )
     logger.info(f"Creating VM with virt-install: {name}")
     logger.debug(f"virt-install command: {virt_cmd}")

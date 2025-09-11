@@ -36,19 +36,38 @@ write_files:
   - path: /home/{{ remote_user }}/build-and-run.sh
     content: |
       #!/bin/bash
-      set -e
+      set -euo pipefail
+      LOG_FILE="/home/{{ remote_user }}/deploy.log"
+      # Log everything to file and console
+      exec > >(tee -a "$LOG_FILE") 2>&1
+      echo "=== Dockvirt build-and-run start $(date -Is) ==="
       cd /home/{{ remote_user }}
-      
+
+      check_port() {
+        local p="$1"
+        echo "[check_port] Checking port $p..."
+        if ss -ltnp | grep -E "(^|:)${p}\\b" >/dev/null 2>&1; then
+          echo "[check_port] Port $p appears to be in use. Listeners:"
+          ss -ltnp | grep -E "(^|:)${p}\\b" || true
+        else
+          echo "[check_port] Port $p is free."
+        fi
+      }
+      # Check well-known ports for reverse proxy
+      check_port 80
+      check_port 443
+
       # Install Docker if not already installed
       if ! command -v docker &> /dev/null; then
+          echo "[docker] Installing Docker..."
           curl -fsSL https://get.docker.com -o get-docker.sh
           sh get-docker.sh
           usermod -aG docker {{ remote_user }}
           systemctl enable --now docker || true
       fi
-      
+
       # Wait for Docker to be ready
-      echo "Waiting for Docker service to be active..."
+      echo "[docker] Waiting for Docker service to be active..."
       until systemctl is-active --quiet docker; do
           systemctl start docker || true
           sleep 2
@@ -58,18 +77,63 @@ write_files:
           sudo -E docker info >/dev/null 2>&1 && break
           sleep 2
       done
-      
+      echo "[docker] Docker info:"
+      sudo -E docker info || true
+
+      # Ensure docker compose is available (plugin or legacy binary)
+      COMPOSE_BIN="docker compose"
+      if ! docker compose version >/dev/null 2>&1; then
+        echo "[compose] 'docker compose' plugin not found. Attempting to install plugin..."
+        if [ -f /etc/debian_version ]; then
+          sudo apt-get update -y || true
+          sudo apt-get install -y docker-compose-plugin || true
+        elif [ -f /etc/fedora-release ] || [ -f /etc/redhat-release ]; then
+          sudo dnf install -y docker-compose-plugin || true
+        fi
+      fi
+      if ! docker compose version >/dev/null 2>&1; then
+        if command -v docker-compose >/dev/null 2>&1; then
+          COMPOSE_BIN="docker-compose"
+          echo "[compose] Falling back to legacy 'docker-compose' binary"
+        else
+          echo "[compose] ERROR: Neither 'docker compose' plugin nor 'docker-compose' binary is available."
+        fi
+      fi
+
+      # Save the rendered compose file for troubleshooting
+      echo "[compose] Saving rendered docker-compose to docker-compose.rendered.yml"
+      cp -f /home/{{ remote_user }}/docker-compose.yml /home/{{ remote_user }}/docker-compose.rendered.yml || true
+
       # Build Docker image if Dockerfile exists (use sudo to avoid group delay)
       {% if dockerfile_content %}
-      echo "Building Docker image..."
+      echo "[compose] Building Docker image {{ app_image }}..."
       sudo -E docker build -t {{ app_image }} .
       {% endif %}
-      
+
       # Start containers (use sudo to avoid group delay)
-      echo "Starting containers..."
-      sudo -E docker compose up -d
-      
+      echo "[compose] Starting containers (docker compose up -d)..."
+      if ! sudo -E $COMPOSE_BIN up -d; then
+        echo "[compose] docker compose up failed with code $?"
+      fi
+
+      echo "[compose] docker compose ps:"
+      sudo -E $COMPOSE_BIN ps || true
+
+      echo "[compose] Logs (reverse-proxy):"
+      sudo -E $COMPOSE_BIN logs --no-color --tail 200 reverse-proxy || true
+      echo "[compose] Logs ({{ app_name }}):"
+      sudo -E $COMPOSE_BIN logs --no-color --tail 200 {{ app_name }} || true
+
+      echo "[check_port] Post-start port checks:"
+      check_port 80
+      check_port 443
+
+      # Quick HTTP probe on localhost to confirm listener
+      echo "[http] curl -I http://127.0.0.1:80/"
+      curl -sS -I http://127.0.0.1:80/ || true
+
       echo "✅ Application deployed successfully!"
+      echo "=== Dockvirt build-and-run end $(date -Is) ==="
     permissions: '0755'
 
 # Install Docker, set permissions, and run build script
