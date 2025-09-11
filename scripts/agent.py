@@ -64,7 +64,7 @@ class HealthReport:
 
 
 def health_check_worker(queue: Queue, report: HealthReport, interval: int):
-    """Periodically checks VM health and logs to a report."""
+    """Periodically checks VM health and logs to a report with advanced diagnostics."""
     report.add("Health monitoring started.")
     while True:
         try:
@@ -83,13 +83,47 @@ def health_check_worker(queue: Queue, report: HealthReport, interval: int):
         else:
             report.add("IP: Not found (Error)")
 
-        rc, _, _ = run(f"getent hosts {report.domain}")
+        # Advanced DNS diagnostics
+        rc, dns_out, dns_err = run(f"getent hosts {report.domain}")
         report.add(
-            f"Domain: {report.domain} ({'Resolves' if rc == 0 else 'Not Resolving'})")
+            f"Domain: {report.domain} ({'Resolves' if rc == 0 else 'Not Resolving'})"
+        )
+        if rc == 0 and dns_out.strip():
+            report.add(f"DNS Output: {dns_out.strip()}")
+        else:
+            report.add(f"DNS Error: {dns_err.strip() if dns_err else 'No error output'}")
 
+        # Ping test for basic network connectivity
+        ping_rc, ping_out, ping_err = run(f"ping -c 4 {report.ip}")
+        if ping_rc == 0:
+            report.add(f"Ping to {report.ip}: Successful")
+            report.add(f"Ping Output: {ping_out.strip()}")
+        else:
+            report.add(f"Ping to {report.ip}: Failed")
+            report.add(f"Ping Error: {ping_err.strip() if ping_err else 'No error output'}")
+
+        # HTTP check with content retrieval
         http_url = f"http://{report.ip}:{report.port}/"
-        ok, code = http_check(http_url, host=report.domain)
-        report.add(f"HTTP: {http_url} -> {code} ({'OK' if ok else 'Failed'})")
+        header = f"-H 'Host: {report.domain}'" if report.domain else ""
+        curl_cmd = f"curl -sS -L --connect-timeout 5 --max-time 10 {header} {http_url} -o /tmp/curl_output -w '%{{http_code}}'"
+        curl_rc, curl_out, curl_err = run(curl_cmd)
+        if curl_rc == 0:
+            try:
+                code = int(curl_out.strip())
+                ok = code == 200
+                report.add(f"HTTP: {http_url} -> {code} ({'OK' if ok else 'Failed'})")
+                # Retrieve content from temporary file
+                content_rc, content_out, _ = run("cat /tmp/curl_output")
+                if content_rc == 0 and content_out.strip():
+                    report.add(f"HTTP Content (first 200 chars): {content_out[:200]}...")
+                else:
+                    report.add("HTTP Content: Empty or not retrieved")
+            except ValueError:
+                report.add(f"HTTP: {http_url} -> Invalid response code ({curl_out.strip()})")
+                report.add(f"HTTP Error: {curl_err.strip() if curl_err else 'No error output'}")
+        else:
+            report.add(f"HTTP: {http_url} -> 0 (Failed)")
+            report.add(f"HTTP Error: {curl_err.strip() if curl_err else 'No error output'}")
 
         cli_log_tail = _tail(Path.home() / ".dockvirt" / "cli.log", 10)
         if cli_log_tail:
@@ -407,6 +441,10 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             if not skip_host_build and (ex / "Dockerfile").exists() and shutil.which("docker"):
                 run("docker build -t %s ." % image, cwd=ex, echo=verbose)
 
+            # Ensure default network is active before starting VM
+            click.echo(f"[agent] Ensuring default libvirt network is active before starting {vm_name}...")
+            ensure_libvirt_default_network(verbose=verbose)
+
             # Up
             cmd_up = (
                 f"{py} -m dockvirt.cli up --name {vm_name} --domain {domain} "
@@ -451,6 +489,8 @@ def run_agent(auto_fix: bool, auto_hosts: bool, skip_host_build: bool, os_list: 
             # Start health check worker
             health_queue = Queue()
             health_report = HealthReport(vm_name, domain, ip, str(port))
+            # Add a longer delay to allow services in the VM to start
+            time.sleep(60)  # Wait for 60 seconds before starting health checks
             health_thread = threading.Thread(
                 target=health_check_worker, args=(health_queue, health_report, 60)
             )
