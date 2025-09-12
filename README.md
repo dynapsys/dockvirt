@@ -71,40 +71,69 @@ dockvirt up --name frontend --domain frontend.local --image nginx:latest --port 
 ### System Requirements
 *   A Linux operating system with KVM support (or WSL2 on Windows)
 *   Python 3.8 or higher
-*   At least 8GB RAM (for running VMs)
-*   20GB+ free disk space
+*   At least 8GB RAM (16GB recommended for multiple VMs)
+*   20GB+ free disk space (SSD recommended for better performance)
+*   libvirt with KVM support
+*   User must be in the `libvirt` and `kvm` groups
 
 ### Required System Packages
 
 #### Ubuntu/Debian:
 ```bash
+# Install dependencies
+sudo apt update
 sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
-                     cloud-image-utils virt-install docker.io wget
+                   cloud-image-utils virtinst docker.io wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
 ```
 
 #### Fedora/CentOS/RHEL:
 ```bash
+# Install dependencies
 sudo dnf install -y qemu-kvm libvirt libvirt-client virt-install \
-                     cloud-utils docker wget
+                   cloud-utils docker wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
 ```
 
 #### Arch Linux:
 ```bash
+# Install dependencies
 sudo pacman -S qemu-full libvirt virt-install bridge-utils \
-                cloud-image-utils docker wget
+              cloud-image-utils docker wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
 ```
 
 ### Post-Installation Setup
+
+After installing the required packages, log out and log back in for group changes to take effect. Then verify the installation:
+
 ```bash
-# Start and enable libvirt service
-sudo systemctl start libvirtd
-sudo systemctl enable libvirtd
+# Verify KVM is available
+kvm-ok
 
-# Add user to required groups
-sudo usermod -aG libvirt $USER
-sudo usermod -aG docker $USER
-
-# Log out and back in for group changes to take effect
+# Verify libvirt is running
+virsh list --all
 ```
 
 ## 📦 Installation
@@ -913,3 +942,85 @@ flowchart TD
   H --> I[HTTP by domain]
   I --> J[dockvirt down]
   J --> K[Report: agent_report.md]
+
+```
+
+Follow these instructions to make the following change to my code document.
+
+Instruction: Update the README.md to include the latest changes, focusing on system requirements and installation instructions.
+
+Code Edit:
+```
+{{ ... existing content until Requirements section ... }}
+
+## 🔧 Requirements
+
+### System Requirements
+*   A Linux operating system with KVM support (or WSL2 on Windows)
+*   Python 3.8 or higher
+*   At least 8GB RAM (16GB recommended for multiple VMs)
+*   20GB+ free disk space (SSD recommended for better performance)
+*   libvirt with KVM support
+*   User must be in the `libvirt` and `kvm` groups
+
+### Required System Packages
+
+#### Ubuntu/Debian:
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
+                   cloud-image-utils virtinst docker.io wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
+```
+
+#### Fedora/CentOS/RHEL:
+```bash
+# Install dependencies
+sudo dnf install -y qemu-kvm libvirt libvirt-client virt-install \
+                   cloud-utils docker wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
+```
+
+#### Arch Linux:
+```bash
+# Install dependencies
+sudo pacman -S qemu-full libvirt virt-install bridge-utils \
+              cloud-image-utils docker wget
+
+# Add user to required groups
+sudo usermod -aG libvirt $(whoami)
+sudo usermod -aG kvm $(whoami)
+
+# Start and enable services
+sudo systemctl start libvirtd
+sudo systemctl enable libvirtd
+```
+
+### Post-Installation Setup
+
+After installing the required packages, log out and log back in for group changes to take effect. Then verify the installation:
+
+```bash
+# Verify KVM is available
+kvm-ok
+
+# Verify libvirt is running
+virsh list --all
+```
+
+{{ ... rest of the README ... }}

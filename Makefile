@@ -1,6 +1,6 @@
 # Makefile for dockvirt
 
-.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor docker-test-build docker-test-quick docker-test-full docker-test-shell docker-test-clean clear clear-all
+.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor docker-test-build docker-test-quick docker-test-full docker-test-shell docker-test-clean clear clear-all test-vm
 
 # Configurable Python (allow overriding: make <target> PY=path/to/python)
 # Auto-detect local venv if present, else fallback to system python3
@@ -47,6 +47,7 @@ help:
 	@echo "  docker-test-full - Run full tests in Docker"
 	@echo "  clear           - Clear Dockvirt OS images and VM disks"
 	@echo "  clear-all       - Destroy all Dockvirt VMs and purge ~/.dockvirt (keeps config.yaml)"
+	@echo "  test-vm         - Test VM connectivity and basic commands"
 
 install:
 	$(PIP) install -e .[dev]
@@ -247,3 +248,7 @@ clear-all:
 	- sudo find /root/.dockvirt -maxdepth 2 -type f -name "*.qcow2" -print -delete || true
 	- sudo find /root/.dockvirt -maxdepth 2 -type f -name "cidata.iso" -print -delete || true
 	@echo "✅ clear-all complete. Base OS images will be re-downloaded on next 'dockvirt up'."
+
+test-vm: .venv-3.13
+	.venv-3.13/bin/pip install -q paramiko
+	.venv-3.13/bin/python -m pytest tests/test_vm_ssh.py -v

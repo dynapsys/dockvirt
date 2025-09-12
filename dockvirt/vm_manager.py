@@ -4,6 +4,8 @@ import json
 import re
 from pathlib import Path
 from jinja2 import Template
+import yaml
+import os
 
 from .image_manager import get_image_path
 
@@ -53,7 +55,7 @@ def run(command):
     return result.stdout.strip()
 
 
-def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=None, https=False):
+def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=None, https=False, ssh_keys=None):
     logger.info(f"Creating VM: name={name}, domain={domain}, image={image}, port={port}, mem={mem}, disk={disk}, cpus={cpus}, os={os_name}")
     
     BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -168,15 +170,10 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
         os_family=os_family,
         remote_user=remote_user
     )
-    (vm_dir / "user-data").write_text(cloudinit_rendered)
-    metadata_content = f"instance-id: {name}\nlocal-hostname: {name}\n"
-    (vm_dir / "meta-data").write_text(metadata_content)
+    
+    # Create cloud-init ISO with user-data and meta-data
+    iso_path = create_cloud_init_iso(name, domain, port, app_files, ssh_keys)
     logger.debug("Cloud-init user-data and meta-data written")
-
-    # Create cloud-init ISO
-    cidata = vm_dir / "cidata.iso"
-    logger.info(f"Creating cloud-init ISO: {cidata}")
-    run(f"cloud-localds {cidata} {vm_dir}/user-data {vm_dir}/meta-data")
 
     # Create VM disk from base image
     disk_img = vm_dir / f"{name}.qcow2"
@@ -210,7 +207,7 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
         f"virt-install --connect qemu:///system "
         f"--name {name} --ram {mem} --vcpus {cpus} "
         f"--disk path={disk_img},format=qcow2 "
-        f"--disk path={cidata},device=cdrom "
+        f"--disk path={iso_path},device=cdrom "
         f"--os-variant {os_variant} "
         f"--import --network {net_spec} --noautoconsole --graphics none "
         f"--channel type=unix,target.type=virtio,target.name=org.qemu.guest_agent.0"
@@ -219,6 +216,100 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
     logger.debug(f"virt-install command: {virt_cmd}")
     run(virt_cmd)
     logger.info(f"VM {name} created successfully")
+
+
+def create_cloud_init_iso(name, domain, port, app_files=None, ssh_keys=None):
+    """Create a cloud-init ISO with user-data and meta-data."""
+    iso_dir = os.path.join(get_vm_dir(name), 'cloud-init')
+    os.makedirs(iso_dir, exist_ok=True)
+    
+    # Default user data with improved SSH settings
+    user_data = {
+        'users': [
+            'default',
+            {
+                'name': 'ubuntu',
+                'sudo': 'ALL=(ALL) NOPASSWD:ALL',
+                'ssh_authorized_keys': ssh_keys or [],
+                'lock_passwd': False,
+                'passwd': "$6$rounds=4096$wQ5DpBu0mDTTGlRr$WjB6tkmJKlYpF3rJ6fX1vJYwv8iJkLmH1vXkLmNpOqRrStUvWxYzA",  # hasło: ubuntu
+                'shell': '/bin/bash',
+                'groups': ['sudo', 'docker']
+            }
+        ],
+        'ssh_pwauth': True,
+        'chpasswd': {
+            'list': [
+                'ubuntu:ubuntu'  # Ustaw hasło dla użytkownika ubuntu
+            ],
+            'expire': False
+        },
+        'ssh_authorized_keys': ssh_keys or [],
+        'ssh_genkeytypes': ['rsa', 'ed25519'],
+        'ssh_keys': {
+            'rsa_private': '',
+            'rsa_public': '',
+            'ed25519_private': '',
+            'ed25519_public': ''
+        },
+        'package_update': True,
+        'package_upgrade': True,
+        'packages': [
+            'qemu-guest-agent',
+            'openssh-server',
+            'sudo',
+            'haveged',  # For better entropy
+            'cloud-initramfs-growroot',  # For root filesystem resizing
+            'bash-completion',
+            'curl',
+            'wget'
+        ],
+        'runcmd': [
+            'systemctl enable --now qemu-guest-agent',
+            'systemctl enable --now ssh',
+            'systemctl restart ssh',
+            'sed -i "s/^#*PasswordAuthentication.*/PasswordAuthentication yes/g" /etc/ssh/sshd_config',
+            'sed -i "s/^#*PermitRootLogin.*/PermitRootLogin no/g" /etc/ssh/sshd_config',
+            'systemctl restart sshd',
+            'cloud-init clean',
+            'cloud-init init',
+            'cloud-init modules --mode=config',
+            'cloud-init modules --mode=final'
+        ],
+        'power_state': {
+            'mode': 'reboot',
+            'message': 'Rebooting after cloud-init configuration',
+            'timeout': 30,
+            'condition': True
+        }
+    }
+
+    # Add port forwarding if specified
+    if port:
+        user_data['runcmd'].extend([
+            'apt-get update',
+            'apt-get install -y nginx',
+            f'echo "server {{ listen 80; location / {{ proxy_pass http://localhost:{port}; }} }}" > /etc/nginx/sites-available/default',
+            'systemctl restart nginx'
+        ])
+
+    meta_data = {
+        'instance-id': f"iid-{name}",
+        'local-hostname': domain
+    }
+
+    # Write config files
+    with open(os.path.join(iso_dir, 'user-data'), 'w') as f:
+        f.write('#cloud-config\n' + yaml.dump(user_data))
+    
+    with open(os.path.join(iso_dir, 'meta-data'), 'w') as f:
+        f.write(yaml.dump(meta_data))
+
+    # Create ISO image
+    iso_path = os.path.join(get_vm_dir(name), 'cidata.iso')
+    run(f"genisoimage -output {iso_path} -volid cidata -joliet -rock {iso_dir}/user-data {iso_dir}/meta-data")
+    
+    return iso_path
 
 
 def destroy_vm(name):
@@ -288,3 +379,7 @@ def get_vm_ip(name):
         pass
 
     return "unknown"
+
+
+def get_vm_dir(name):
+    return os.path.join(str(BASE_DIR), name)

@@ -70,7 +70,8 @@ def main():
     default=False,
     help="Enable HTTPS with SSL certificates. Requires full domain name (e.g., app.dockvirt.dev)"
 )
-def up(name, domain, image, port, os_name, mem, disk, cpus, net, https):
+@click.option('--ssh-keys', multiple=True, help='SSH public keys to add to the VM (can be specified multiple times)')
+def up(name, domain, image, port, os_name, mem, disk, cpus, net, https, ssh_keys):
     """Creates a VM in libvirt with dynadock + Caddy."""
     logger.info(f"Starting VM creation with parameters: name={name}, domain={domain}, image={image}, port={port}")
     config = load_config()
@@ -119,7 +120,7 @@ def up(name, domain, image, port, os_name, mem, disk, cpus, net, https):
         "os": os_name,
     })
     try:
-        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net, https)
+        create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net, https, ssh_keys)
         # Wait for IP assignment (dhcp leases)
         ip = ""
         for _ in range(60):  # up to ~120s
