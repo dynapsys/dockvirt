@@ -1,0 +1,10 @@
+# Configuration for Docker Compose example
+name=compose-demo
+domain=compose.dockvirt.dev
+port=80
+os=ubuntu22.04
+net=network=default
+ssh_port=2222
+memory=2048
+cpu=2
+disk_size=20G

@@ -2,8 +2,15 @@
 
 [![PyPI version](https://badge.fury.io/py/dockvirt.svg)](https://badge.fury.io/py/dockvirt)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/dynapsys/dockvirt/tests.yml?branch=main)](https://github.com/dynapsys/dockvirt/actions)
+[![Documentation Status](https://readthedocs.org/projects/dockvirt/badge/?version=latest)](https://dockvirt.readthedocs.io/)
+[![Coverage Status](https://coveralls.io/repos/github/dynapsys/dockvirt/badge.svg?branch=main)](https://coveralls.io/github/dynapsys/dockvirt?branch=main)
+[![Docker Pulls](https://img.shields.io/docker/pulls/dynapsys/dockvirt)](https://hub.docker.com/r/dynapsys/dockvirt)
 
 **Create lightweight, isolated development environments with a single command.**
+
 
 `dockvirt` is a CLI tool that automates the process of creating virtual machines (VMs) using libvirt/KVM. It allows you to instantly run applications in Docker containers, with a pre-configured Caddy reverse proxy, fully isolated from your host operating system.
 
@@ -223,6 +230,16 @@ sudo ./scripts/install.sh
 - cloud-image-utils (`cloud-localds`)
 - Docker (for building application images)
 
+┌─────────────────────────────────────────────┐
+│ System Requirements                         │
+├────────────────┬────────────────────────────┤
+│ OS             │ Linux with KVM support     │
+│ RAM            │ 8GB+ (16GB recommended)    │
+│ Storage        │ 20GB+ free (SSD preferred) │
+│ Python         │ 3.8+                       │
+│ User Groups    │ libvirt, kvm, docker       │
+└────────────────┴────────────────────────────┘
+
 **Checking for virtualization support:**
 ```bash
 # Check if KVM is available
@@ -250,6 +267,20 @@ graph TD
     J --> K[Run virt-install]
     K --> L[VM ready with Docker + Caddy]
 ```
+
+
+## 📊 Architecture Overview
+
+```mermaid
+graph TD
+    A[User] -->|dockvirt up| B[Create VM]
+    B --> C[Install Docker]
+    B --> D[Configure Network]
+    C --> E[Pull Container Image]
+    D --> F[Setup Port Forwarding]
+    E --> G[Start Container]
+    F --> G
+    G --> H[Access Application]
 
 ### System Architecture
 
