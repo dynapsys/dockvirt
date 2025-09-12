@@ -673,20 +673,6 @@ Tips:
 - Always connect virsh to the system libvirt with: `virsh --connect qemu:///system <subcommand>`.
 - Alternatively, configure a libvirt storage pool (e.g. `/var/lib/libvirt/images/dockvirt`) and store VM files there to avoid ACLs on `$HOME`.
 
-### ❌ qemu-img "Failed to get write lock"
-
-This usually happens after an interrupted run that left a domain or disk around. Fix:
-
-```bash
-# Tear down the VM if it exists
-dockvirt down --name <vm_name>
-
-# Or auto-heal common leftovers
-make heal
-```
-
-Then try `dockvirt up` again.
-
 ### ❌ KVM not available
 ```bash
 # Check if virtualization is enabled in your BIOS
@@ -976,82 +962,40 @@ flowchart TD
 
 ```
 
-Follow these instructions to make the following change to my code document.
+## 📋 Examples
 
-Instruction: Update the README.md to include the latest changes, focusing on system requirements and installation instructions.
+Explore different use cases with our examples:
 
-Code Edit:
-```
-{{ ... existing content until Requirements section ... }}
+1. [Static Nginx Website](examples/1-static-nginx-website/) - Host a simple static website
+2. [Python Flask App](examples/2-python-flask-app/) - Deploy a Python web application
+3. [Multi-OS Comparison](examples/3-multi-os-comparison/) - Test your app on different OS images
+4. [Microservices Stack](examples/4-microservices-stack/) - Deploy a multi-container application
+5. [Docker Compose Integration](examples/5-docker-compose/) - Use dockvirt with Docker Compose for complex applications
 
-## 🔧 Requirements
+### Docker Compose Example
 
-### System Requirements
-*   A Linux operating system with KVM support (or WSL2 on Windows)
-*   Python 3.8 or higher
-*   At least 8GB RAM (16GB recommended for multiple VMs)
-*   20GB+ free disk space (SSD recommended for better performance)
-*   libvirt with KVM support
-*   User must be in the `libvirt` and `kvm` groups
-
-### Required System Packages
-
-#### Ubuntu/Debian:
-```bash
-# Install dependencies
-sudo apt update
-sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils \
-                   cloud-image-utils virtinst docker.io wget
-
-# Add user to required groups
-sudo usermod -aG libvirt $(whoami)
-sudo usermod -aG kvm $(whoami)
-
-# Start and enable services
-sudo systemctl start libvirtd
-sudo systemctl enable libvirtd
-```
-
-#### Fedora/CentOS/RHEL:
-```bash
-# Install dependencies
-sudo dnf install -y qemu-kvm libvirt libvirt-client virt-install \
-                   cloud-utils docker wget
-
-# Add user to required groups
-sudo usermod -aG libvirt $(whoami)
-sudo usermod -aG kvm $(whoami)
-
-# Start and enable services
-sudo systemctl start libvirtd
-sudo systemctl enable libvirtd
-```
-
-#### Arch Linux:
-```bash
-# Install dependencies
-sudo pacman -S qemu-full libvirt virt-install bridge-utils \
-              cloud-image-utils docker wget
-
-# Add user to required groups
-sudo usermod -aG libvirt $(whoami)
-sudo usermod -aG kvm $(whoami)
-
-# Start and enable services
-sudo systemctl start libvirtd
-sudo systemctl enable libvirtd
-```
-
-### Post-Installation Setup
-
-After installing the required packages, log out and log back in for group changes to take effect. Then verify the installation:
+Run a multi-container application with a single command:
 
 ```bash
-# Verify KVM is available
-kvm-ok
+# Navigate to the example
+cd examples/5-docker-compose
 
-# Verify libvirt is running
-virsh list --all
+# Start the VM with dockvirt
+dockvirt up
+
+# SSH into the VM
+ssh -p 2222 ubuntu@$(virsh domifaddr compose-demo | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' | head -1)
+
+# Inside the VM, start the Docker Compose services
+cd /var/lib/dockvirt/compose-demo
+docker-compose up -d
 ```
 
-{{ ... rest of the README ... }}
+This will set up:
+- A Flask application container
+- An Nginx reverse proxy container
+- Proper networking between containers
+- Persistent storage
+- Health checks and automatic restarts
+
+Access the application at: http://compose.dockvirt.dev

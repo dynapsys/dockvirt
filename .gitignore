@@ -24,6 +24,8 @@ lib/
 lib64/
 parts/
 sdist/
+rpi-dockvirt.img
+*.img
 var/
 wheels/
 share/python-wheels/

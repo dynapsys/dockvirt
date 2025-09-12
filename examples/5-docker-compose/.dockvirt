@@ -1,6 +1,7 @@
 # Configuration for Docker Compose example
 name=compose-demo
 domain=compose.dockvirt.dev
+image=ubuntu22.04
 port=80
 os=ubuntu22.04
 net=network=default

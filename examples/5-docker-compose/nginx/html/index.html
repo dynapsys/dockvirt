@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Content - Dockvirt Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .container {
+            padding: 0 20px;
+        }
+        .card {
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Static Content Served by Nginx</h1>
+        <p>This is a static HTML page served from the Nginx container</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>About This Demo</h2>
+            <p>This is a demonstration of serving static content through Nginx in a Docker Compose setup, running inside a KVM virtual machine managed by dockvirt.</p>
+        </div>
+
+        <div class="card">
+            <h2>How It Works</h2>
+            <ol>
+                <li>The <a href="/">main application</a> is a Flask app running in a separate container</li>
+                <li>Nginx acts as a reverse proxy, routing requests to the appropriate service</li>
+                <li>Static files (like this page) are served directly by Nginx</li>
+                <li>All containers run inside a KVM virtual machine for isolation</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>Try These Links</h2>
+            <ul>
+                <li><a href="/">Back to the main application</a></li>
+                <li><a href="/api/status">View API status</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
