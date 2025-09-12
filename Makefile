@@ -1,6 +1,6 @@
 # Makefile for dockvirt
 
-.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor docker-test-build docker-test-quick docker-test-full docker-test-shell docker-test-clean
+.PHONY: help install build test-e2e publish clean version-patch version-minor version-major version-show dev-setup lint format test-examples install-system check test-commands docs doctor docker-test-build docker-test-quick docker-test-full docker-test-shell docker-test-clean clear clear-all
 
 # Configurable Python (allow overriding: make <target> PY=path/to/python)
 # Auto-detect local venv if present, else fallback to system python3
@@ -45,6 +45,8 @@ help:
 	@echo "  docker-test-shell - Open shell in test container"
 	@echo "  docker-test-quick - Run quick tests in Docker"
 	@echo "  docker-test-full - Run full tests in Docker"
+	@echo "  clear           - Clear Dockvirt OS images and VM disks"
+	@echo "  clear-all       - Destroy all Dockvirt VMs and purge ~/.dockvirt (keeps config.yaml)"
 
 install:
 	$(PIP) install -e .[dev]
@@ -217,3 +219,31 @@ docker-test-full:
 validate:
 	@echo "✅ Validating and fixing environment..."
 	@$(PY) -m dockvirt.cli doctor --fix --yes
+
+clear:
+	@echo "🧹 Clearing Dockvirt OS images and VM disks under $$HOME/.dockvirt ..."
+	- rm -rf $(HOME)/.dockvirt/images
+	- find $(HOME)/.dockvirt -maxdepth 2 -type f -name "*.qcow2" -print -delete
+	- find $(HOME)/.dockvirt -maxdepth 2 -type f -name "cidata.iso" -print -delete
+	@echo "✅ Done. Base OS images will be re-downloaded on next 'dockvirt up'."
+
+clear-all:
+	@echo "🛑 Destroying and undefining Dockvirt VMs (qemu:///system) matching directories in $$HOME/.dockvirt ..."
+	@for d in $(HOME)/.dockvirt/*; do \
+		[ -d "$$d" ] || continue; \
+		name=$$(basename "$$d"); \
+		echo " - $$name"; \
+		virsh --connect qemu:///system destroy "$$name" >/dev/null 2>&1 || true; \
+		virsh --connect qemu:///system undefine "$$name" --remove-all-storage >/dev/null 2>&1 || true; \
+	done
+	@echo "🧹 Removing per-VM directories and caches under $$HOME/.dockvirt (preserving config.yaml*) ..."
+	- rm -rf $(HOME)/.dockvirt/images
+	- find $(HOME)/.dockvirt -mindepth 1 -maxdepth 1 -type d -not -name 'images' -print -exec rm -rf {} +
+	- find $(HOME)/.dockvirt -maxdepth 2 -type f -name "*.qcow2" -print -delete
+	- find $(HOME)/.dockvirt -maxdepth 2 -type f -name "cidata.iso" -print -delete
+	@echo "🧼 Optional: cleaning sudo-created resources under /root/.dockvirt (ignoring errors) ..."
+	- sudo bash -lc 'for d in /root/.dockvirt/*; do [ -d "$$d" ] || continue; n=$${d##*/}; echo " - $$n"; virsh --connect qemu:///system destroy "$$n" >/dev/null 2>&1 || true; virsh --connect qemu:///system undefine "$$n" --remove-all-storage >/dev/null 2>&1 || true; done'
+	- sudo rm -rf /root/.dockvirt/images
+	- sudo find /root/.dockvirt -maxdepth 2 -type f -name "*.qcow2" -print -delete || true
+	- sudo find /root/.dockvirt -maxdepth 2 -type f -name "cidata.iso" -print -delete || true
+	@echo "✅ clear-all complete. Base OS images will be re-downloaded on next 'dockvirt up'."

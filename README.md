@@ -31,6 +31,14 @@ dockvirt up --name db --domain db.local --image postgres:latest --port 5432
 # Each VM has its own port space - zero conflicts!
 ```
 
+### restart
+
+```bash
+dockvirt down --name frontend
+rm -rf ~/.dockvirt/frontend
+dockvirt up --name frontend --domain frontend.local --image nginx:latest --port 80
+```    
+
 ### 🎯 Key Advantages of the Solution:
 
 *   **Eliminates Port Conflicts**: Each application runs in a separate VM with its own network space.

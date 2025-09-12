@@ -223,8 +223,8 @@ def create_vm(name, domain, image, port, mem, disk, cpus, os_name, config, net=N
 
 def destroy_vm(name):
     logger.info(f"Destroying VM: {name}")
-    run(f"virsh destroy {name} || true")
-    run(f"virsh undefine {name} --remove-all-storage || true")
+    run(f"virsh --connect qemu:///system destroy {name} || true")
+    run(f"virsh --connect qemu:///system undefine {name} --remove-all-storage || true")
     logger.info(f"VM {name} destroyed successfully")
 
 
